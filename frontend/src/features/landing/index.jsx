@@ -35,7 +35,7 @@ export function LandingPage() {
           <a href="#destinos" onClick={jump('destinos')}>Destinos</a>
           <a href="#plataforma" onClick={jump('plataforma')}>Plataforma</a>
           <a href="#aprende" onClick={jump('aprende')}>Aprende</a>
-          <Link to="/login" className="btn btn--primary btn--sm" data-magnetic>Entrar</Link>
+          <Link to="/login" className="btn btn--ghost btn--sm">Ingresar</Link><Link to="/login" state={{ registro: true }} className="btn btn--primary btn--sm">Crear cuenta</Link>
         </nav>
         <button className="lp-burger" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label="Abrir menú"><Icon name={open ? 'close' : 'menu'} /></button>
       </header>

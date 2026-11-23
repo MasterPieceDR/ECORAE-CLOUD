@@ -3,13 +3,15 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useAuth } from './index';
 import { api, photo } from '@/shared/api';
+import { Stepper } from '@/shared/ui/Stepper';
 import { Icon } from '@/shared/ui/Icon';
 import { LogoMark } from '@/shared/ui/Logo';
 import { useCinema } from '@/shared/hooks/useCinema';
 import './auth.css';
 
 export function LoginPage() {
-  const [tab, setTab] = useState('login');
+  const { state } = useLocation();
+  const [tab, setTab] = useState(state?.registro ? 'register' : 'login');
   const [error, setError] = useState('');
   const [correoVerificar, setCorreoVerificar] = useState('');
   const [espera, setEspera] = useState(0);
@@ -20,7 +22,6 @@ export function LoginPage() {
   const [orgs, setOrgs] = useState([]);
   const { login, registrar } = useAuth();
   const navigate = useNavigate();
-  const { state } = useLocation();
   const root = useCinema();
 
   useEffect(() => { api.cuentasDemo().then(setDemo, () => setDemo({ habilitado: false })); }, []);
@@ -70,6 +71,7 @@ export function LoginPage() {
               </button>
             ))}
           </div>
+          {tab !== 'login' && <Stepper steps={['Datos', 'Verificar correo']} current={tab === 'verificar' ? 1 : 0} />}
           <form onSubmit={submit} className="auth__fields">
             {tab === 'verificar' && <><p>Ingresa el código enviado a {correoVerificar}.</p><label className="field">Código de seis dígitos<input name="codigo" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required /></label><button type="button" disabled={busy || espera > 0} onClick={async () => { setError(''); setBusy(true); try { const r = await api.reenviarCodigo(correoVerificar); setMensaje(r.mensaje); setEspera(60); } catch (e) { setError(e.message); } finally { setBusy(false); } }}>{espera ? `Reenviar en ${espera} s` : 'Reenviar código'}</button></>}
             {mensaje && <p role="status">{mensaje}</p>}
@@ -97,8 +99,8 @@ export function LoginPage() {
             <button className="btn btn--primary" disabled={busy}>{busy ? 'Entrando...' : tab === 'login' ? 'Ingresar' : tab === 'verificar' ? 'Verificar' : 'Crear cuenta'}</button>
           </form>
           {tab === 'login' && demo?.habilitado && (
-            <section className="demo" aria-labelledby="demo-t">
-              <h2 id="demo-t">Cuentas de demostración <small>datos sintéticos · clave {demo.clave}</small></h2>
+            <details className="demo">
+              <summary>Cuentas de demostración</summary><p className="hint">Datos sintéticos · clave {demo.clave}</p>
               <div className="demo__grid">
                 {demo.cuentas.map((c) => (
                   <button key={c.alias} type="button" className="demo__btn" disabled={busy} onClick={() => entrarComo(c)} title={c.descripcion}>
@@ -106,7 +108,7 @@ export function LoginPage() {
                   </button>
                 ))}
               </div>
-            </section>
+            </details>
           )}
         </motion.div>
       </div>

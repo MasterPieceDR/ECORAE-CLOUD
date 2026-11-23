@@ -1,8 +1,9 @@
+import { PageHeader } from '@/shared/ui/PageHeader';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useAuth, useCatalogos } from '@/features/auth';
-import { api, photo, formatDay, formatDate } from '@/shared/api';
+import { api, formatDay, formatDate } from '@/shared/api';
 import { useAsync } from '@/shared/hooks/useAsync';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Icon } from '@/shared/ui/Icon';
@@ -22,14 +23,7 @@ export function ProfilePage() {
   user.permisos.forEach((p) => { const [r] = p.codigo.split('.'); (porRecurso[r] ??= []).push(p); });
   return (
     <>
-      <section className="photo-banner pf-head"><img src={photo('servidores')} alt="" />
-        <Avatar name={user.alias} large />
-        <div className="pf-head__who">
-          <h1>{user.alias}</h1>
-          <p>{user.organizacion?.nombre}</p>
-          <span className="badge">{user.roles.map((r) => nombreRol(r.codigo) + (r.centro ? ` · ${r.centro}` : '')).join(' / ')} · desde {formatDay(user.desde)}</span>
-        </div>
-      </section>
+      <PageHeader title={user.alias} description={`${user.organizacion?.nombre ?? ''} · desde ${formatDay(user.desde)}`} action={<Avatar name={user.alias} large />} />
       <div className="pf-tabs" role="tablist">
         {TABS.map(([k, label]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{label}{tab === k && <motion.i layoutId="pf-line" />}</button>

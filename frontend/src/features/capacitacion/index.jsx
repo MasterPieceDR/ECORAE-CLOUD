@@ -1,3 +1,4 @@
+import { PageHeader } from '@/shared/ui/PageHeader';
 import { useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
@@ -21,10 +22,7 @@ export function CapacitacionPage() {
   const { data, loading, error } = useAsync(() => api.contenidos({ q, tema }), [q, tema]);
   return (
     <>
-      <div className="page-head">
-        <div><h1 className="page-title">Capacitación</h1><p className="page-sub">Videos para reducir la brecha digital de quienes participan en la red (Innovación, RNF-07).</p></div>
-        {can('CONTENIDO.PUBLICAR') && <Link to="publicar" className="btn btn--primary"><Icon name="upload" size={18} /> Publicar video</Link>}
-      </div>
+      <PageHeader title="Capacitación" description="Videos para reducir la brecha digital de quienes participan en la red." action={can('CONTENIDO.PUBLICAR') && <Link to="publicar" className="btn btn--primary"><Icon name="upload" size={18} /> Publicar video</Link>} />
       <div className="cap-tools">
         <label className="field"><span className="sr">Buscar</span><input type="search" placeholder="Buscar contenidos" value={q} onChange={(e) => setQ(e.target.value)} /></label>
         <div className="chips" role="group" aria-label="Temas">

@@ -92,3 +92,11 @@
 .detail__actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 .detail .tabs-row { flex-wrap: wrap; margin-bottom: 16px; }
 @media (max-width: 480px) { .filters { grid-template-columns: 1fr; } }
+
+.filters { grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); }
+.filters label:first-child { grid-column: 1 / -1; }
+.filters .field { min-width: 0; }
+.devices { max-width: 100%; min-width: 0; }
+.devices table { min-width: 720px; }
+.devices td { overflow-wrap: anywhere; }
+@media (max-width: 900px) { .devices table { min-width: 0; } }

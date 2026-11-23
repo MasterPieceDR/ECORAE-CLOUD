@@ -6,11 +6,12 @@ import { useAuth, useCatalogos } from '@/features/auth';
 import { useAsync } from '@/shared/hooks/useAsync';
 import { Icon } from '@/shared/ui/Icon';
 import { Skeleton } from '@/shared/ui/Skeleton';
-import { StateBadge, ClasBadge } from '@/shared/ui/StateBadge';
+import { StateBadge } from '@/shared/ui/StateBadge';
 import { Modal } from '@/shared/ui/Modal';
 import { useToast } from '@/shared/ui/Toast';
 import { RegistrarDialog } from './RegistrarDialog';
 import { PageHeader } from '@/shared/ui/PageHeader';
+import { StatusBadge } from '@/shared/ui/StatusBadge';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import './objetos.css';
 
@@ -35,16 +36,16 @@ export function ObjetosPage() {
     <>
       <PageHeader title="Equipos y lotes" description={`Cada objeto con su identificador único, estado e historia${data ? ` · ${data.total} visibles para ti` : ''}.`} action={can('OBJETO.REGISTRAR') && <button className="btn btn--primary" onClick={() => setDialogo('registrar')}><Icon name="plus" size={18} /> Registrar equipo</button>} />
       <div className="filters">
-        <label className="field"><span className="sr">Buscar</span><input type="search" placeholder="Código, categoría, marca, serie, lote u origen" value={filtros.q} onChange={set('q')} /></label>
+        <label className="field">Buscar<input type="search" placeholder="Código, categoría, marca, serie, lote u origen" value={filtros.q} onChange={set('q')} /></label>
         <label className="field">Categoría<select value={categoria} onChange={set('categoria')}><option value="">Todas las categorías</option>{c.categorias.filter((x) => x.nivel >= 3).map((x) => <option key={x.codigo} value={x.codigo}>{x.nombre}</option>)}</select></label>
         <label className="field">Serie exacta<input value={filtros.serie} onChange={set('serie')} /></label>
-        <label className="field"><span className="sr">Estado</span>
+        <label className="field">Estado
           <select value={filtros.estado} onChange={set('estado')}><option value="">Todos los estados</option>{c.estados.map((s) => <option key={s.codigo} value={s.codigo}>{s.nombre}</option>)}</select>
         </label>
-        <label className="field"><span className="sr">Clasificación</span>
+        <label className="field">Clasificación
           <select value={filtros.clasificacion} onChange={set('clasificacion')}><option value="">Toda clasificación</option>{c.clasificaciones.filter((k) => k.codigo !== 'PENDIENTE').map((k) => <option key={k.codigo} value={k.codigo}>{k.nombre}</option>)}</select>
         </label>
-        <label className="field"><span className="sr">Centro</span>
+        <label className="field">Centro
           <select value={filtros.centro} onChange={set('centro')}><option value="">Todos los centros</option>{c.centros.map((x) => <option key={x.codigo} value={x.codigo}>{x.codigo} · {x.nombre}</option>)}</select>
         </label>
       </div>
@@ -63,19 +64,19 @@ export function ObjetosPage() {
 
       {error && <p className="error" role="alert">{error.message}</p>}
       {loading && !data ? <Skeleton h={320} /> : objetos.length === 0 ? <EmptyState title="No encontramos equipos" description="Prueba otros filtros o limpia la búsqueda para ver más resultados." /> : (
-        <div className="card devices">
+        <div className="card devices tbl-wrap">
           <table>
-            <thead><tr><th><span className="sr">Seleccionar</span></th><th>Código</th><th>Equipo</th><th>Serie</th><th>Origen</th><th>Ubicación</th><th>Clasificación</th><th>Estado</th><th><span className="sr">Abrir</span></th></tr></thead>
+            <thead><tr><th><span className="sr">Seleccionar</span></th><th>Código</th><th>Equipo</th><th>Serie</th><th>Ubicación</th><th>Estado</th><th><span className="sr">Abrir</span></th></tr></thead>
             <tbody>
               {objetos.map((o) => (
                 <tr key={o.uid} data-sel={sel.has(o.uid)}>
                   <td><input type="checkbox" className="pick" aria-label={`Seleccionar ${o.codigo}`} checked={sel.has(o.uid)} onChange={() => toggle(o.uid)} /></td>
-                  <td data-label="Código"><Link to={o.codigo}><b>{o.codigo}</b></Link>{o.tareas?.length > 0 && <span className="pending" title="Tienes una tarea con este objeto">tarea</span>}</td>
+                  <td data-label="Código"><Link to={o.codigo}><b>{o.codigo}</b></Link>{o.tareas?.length > 0 && <StatusBadge tone="warning" label="Tarea" />}</td>
                   <td data-label="Equipo">{o.tipo_objeto === 'LOTE' ? `Lote · ${o.miembros_vigentes} equipos` : o.categoria_nombre}<small>{o.marca ?? ''}{o.lote_codigo ? ` · en ${o.lote_codigo}` : ''}</small></td>
                   <td data-label="Serie">{o.numero_serie ?? '—'}</td>
-                  <td data-label="Origen">{o.organizacion_origen_nombre}</td>
+
                   <td data-label="Ubicación">{o.centro_actual ? `${o.centro_actual}${o.ubicacion_actual && o.ubicacion_actual !== 'RAIZ' ? ` / ${o.ubicacion_actual}` : ''}` : o.transferencia_nodo_destino ? `→ ${o.transferencia_nodo_destino}` : '—'}<small>{desdeHace(o.ultimo_movimiento)}</small></td>
-                  <td data-label="Clasificación">{o.tipo_objeto === 'LOTE' ? '—' : <ClasBadge value={o.clasificacion} />}</td>
+
                   <td data-label="Estado"><StateBadge state={o.estado} /></td>
                   <td><Link to={o.codigo} className="devices__go" aria-label={`Ver trazabilidad de ${o.codigo}`}><Icon name="arrow" size={18} /></Link></td>
                 </tr>

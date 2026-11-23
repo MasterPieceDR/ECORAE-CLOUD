@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 
-export const COLORS = { holgura: 'var(--success)', saturada: 'var(--warning)', corte: 'var(--danger)' };
+export const COLORS = { holgura: 'var(--success)', saturada: 'var(--danger)', corte: 'var(--danger)' };
 // Columna por tipo de nodo: s → generadores → acopios → evaluación → taller → destinos → t
 const COLUMNA = { FUENTE: 0, GENERADOR: 1, ACOPIO: 2, EVALUACION: 3, REACONDICIONAMIENTO: 4, BENEFICIARIO: 5, RECICLAJE: 5, DISPOSICION: 5, SUMIDERO: 6 };
 const W = 1000;

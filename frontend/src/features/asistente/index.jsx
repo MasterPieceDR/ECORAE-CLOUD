@@ -1,3 +1,4 @@
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { api } from '@/shared/api';
@@ -44,6 +45,7 @@ function Herramientas({ lista }) {
   return (
     <div className="asis__body">
       <p className="hint">Tienes {lista.length} herramienta(s) según tu rol. Las de escritura piden confirmación.</p>
+      {lista.length === 0 && <EmptyState title="Sin herramientas disponibles" description="Tu rol no tiene herramientas disponibles en este momento." />}
       <ul className="tools">
         {lista.map((h) => (
           <li key={h.nombre}><button onClick={() => setSel(h)}>

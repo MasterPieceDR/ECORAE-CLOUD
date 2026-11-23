@@ -1,3 +1,5 @@
+import { EmptyState } from '@/shared/ui/EmptyState';
+import { PageHeader } from '@/shared/ui/PageHeader';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, formatDate, DOCUMENTO } from '@/shared/api';
@@ -13,14 +15,14 @@ export function DocumentosPage() {
   const { data, loading, error } = useAsync(() => api.documentos({ tipo, abiertos: abiertos || undefined }), [tipo, abiertos]);
   return (
     <>
-      <div className="page-head"><div><h1 className="page-title">Documentos</h1><p className="page-sub">Solicitudes, recepciones, evaluaciones, transferencias, tratamientos, asignaciones y cierres con numeración correlativa. Ves los de tu organización o centro.</p></div></div>
+      <PageHeader title="Documentos" description="Solicitudes, recepciones, evaluaciones, transferencias, tratamientos, asignaciones y cierres con numeración correlativa. Ves los de tu organización o centro." />
       <div className="chips" role="group" aria-label="Tipo de documento">
         <button className="chip" aria-pressed={!tipo} onClick={() => setTipo('')}>Todos</button>
         {Object.entries(DOCUMENTO).map(([k, v]) => <button key={k} className="chip" aria-pressed={tipo === k} onClick={() => setTipo(k)}>{v}</button>)}
       </div>
       <label className="check" style={{ margin: '14px 0' }}><input type="checkbox" checked={abiertos} onChange={(e) => setAbiertos(e.target.checked)} /> Solo abiertos (emitidos o en curso)</label>
       {error && <p className="error" role="alert">{error.message}</p>}
-      {loading && !data ? <Skeleton h={300} /> : data?.length === 0 ? <p className="empty card">No hay documentos con ese filtro.</p> : (
+      {loading && !data ? <Skeleton h={300} /> : data?.length === 0 ? <EmptyState title="No hay documentos" description="Prueba otro filtro para ampliar los resultados." /> : (
         <div className="card tbl-wrap">
           <table className="tbl">
             <thead><tr><th>Número</th><th>Tipo</th><th>Fecha</th><th>Objetos</th><th>Centro / ruta</th><th>Organización</th><th>Responsable</th><th>Estado</th></tr></thead>

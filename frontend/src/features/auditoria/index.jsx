@@ -1,3 +1,5 @@
+import { EmptyState } from '@/shared/ui/EmptyState';
+import { PageHeader } from '@/shared/ui/PageHeader';
 import { Fragment, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, formatDate } from '@/shared/api';
@@ -14,7 +16,7 @@ export function AuditoriaPage() {
   const [tab, setTab] = useState('cambios');
   return (
     <>
-      <div className="page-head"><div><h1 className="page-title">Auditoría</h1><p className="page-sub">Quién cambió qué, cuándo y por qué canal. Cada registro tiene huella SHA-256 y los periodos se sellan en cadena.</p></div></div>
+      <PageHeader title="Auditoría" description="Quién cambió qué, cuándo y por qué canal. Cada registro tiene huella SHA-256 y los periodos se sellan en cadena." />
       <div className="tabs-row chips" role="tablist">
         {TABS.map(([k, l]) => <button key={k} role="tab" className="chip" aria-pressed={tab === k} aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>)}
       </div>
@@ -60,7 +62,7 @@ function Cambios() {
               ))}
             </tbody>
           </table>
-          {data?.length === 0 && <p className="empty">Sin cambios con ese filtro.</p>}
+          {data?.length === 0 && <EmptyState title="Sin cambios" description="Prueba otro filtro para ampliar los resultados." />}
         </div>
       )}
     </>
@@ -110,7 +112,7 @@ function Bitacora({ cargar, columnas }) {
         <thead><tr>{columnas.map(([, t]) => <th key={t}>{t}</th>)}</tr></thead>
         <tbody>{data.map((x, i) => <tr key={i}>{columnas.map(([k, , fmt]) => <td key={k}>{fmt ? fmt(x[k]) : x[k] ?? '—'}</td>)}</tr>)}</tbody>
       </table>
-      {data.length === 0 && <p className="empty">Sin registros.</p>}
+      {data.length === 0 && <EmptyState title="Sin registros" description="Todavía no hay registros disponibles." />}
     </div>
   );
 }

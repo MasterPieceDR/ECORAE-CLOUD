@@ -1,3 +1,4 @@
+import { PageHeader } from '@/shared/ui/PageHeader';
 import { useState } from 'react';
 import { api, formatDate } from '@/shared/api';
 import { useAuth, useCatalogos } from '@/features/auth';
@@ -19,7 +20,7 @@ export function UsuariosPage() {
   const lista = (data ?? []).filter((u) => !q || `${u.alias} ${u.organizacion}`.toLowerCase().includes(q.toLowerCase()));
   return (
     <>
-      <div className="page-head"><div><h1 className="page-title">Usuarios y roles</h1><p className="page-sub">Las asignaciones quedan auditadas con motivo. Nadie se asigna roles a sí mismo y los roles incompatibles se rechazan (separación de funciones).</p></div></div>
+      <PageHeader title="Usuarios y roles" description="Las asignaciones quedan auditadas con motivo. Nadie se asigna roles a sí mismo y los roles incompatibles se rechazan (separación de funciones)." />
       <BandejaSolicitudes onResuelta={reload} />
       <label className="field" style={{ maxWidth: 380, marginBottom: 16 }}><span className="sr">Buscar</span><input type="search" placeholder="Buscar por alias u organización" value={q} onChange={(e) => setQ(e.target.value)} /></label>
       {error && <p className="error" role="alert">{error.message}</p>}

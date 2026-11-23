@@ -1,3 +1,4 @@
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { useState } from 'react';
 import { api, formatDate } from '@/shared/api';
 import { useAuth, useCatalogos } from '@/features/auth';
@@ -105,7 +106,7 @@ export function BandejaSolicitudes({ onResuelta }) {
         <h2 className="detail__h2"><Icon name="inbox" size={20} /> Solicitudes de acceso {pendientes > 0 && <span className="badge" data-tone="sun">{pendientes} pendiente(s)</span>}</h2>
         <label className="check"><input type="checkbox" checked={todas} onChange={(e) => setTodas(e.target.checked)} /> Ver historial</label>
       </div>
-      {lista.data?.length === 0 && <p className="hint">No hay solicitudes {todas ? '' : 'pendientes'}.</p>}
+      {lista.data?.length === 0 && <EmptyState title="No hay solicitudes" description={todas ? "Todavía no hay solicitudes." : "No hay solicitudes pendientes de revisión."} />}
       <ul className="sol-list">
         {(lista.data ?? []).map((s) => (
           <li key={s.uid}>

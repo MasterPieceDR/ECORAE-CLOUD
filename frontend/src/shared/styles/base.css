@@ -164,3 +164,6 @@ select optgroup { background: var(--surface-2); color: var(--text); }
 .stepper li[aria-current], .stepper li[data-complete='true'] { color: var(--primary-strong); font-weight: 600; }
 .tabs-row [aria-selected='true'] { background: var(--primary); color: var(--on-primary); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } }
+
+.page-head { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px 24px; min-width: 0; }
+.page-head > div { min-width: 0; overflow-wrap: anywhere; }

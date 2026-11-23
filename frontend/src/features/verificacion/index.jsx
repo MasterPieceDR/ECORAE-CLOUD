@@ -1,3 +1,4 @@
+import { PageHeader } from '@/shared/ui/PageHeader';
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { api, formatDate } from '@/shared/api';
@@ -28,11 +29,7 @@ export function VerificacionPage() {
   const d = v.data;
   return (
     <>
-      <div className="page-head">
-        <div><h1 className="page-title">Base de datos</h1><p className="page-sub">Verificación en vivo de PostgreSQL: conexión, integridad y consistencia de lo que guarda la aplicación.</p></div>
-        <button className="btn btn--primary" onClick={recargar} disabled={cx.loading || v.loading}><Icon name="refresh" size={18} /> {cx.loading || v.loading ? 'Verificando...' : 'Verificar ahora'}</button>
-      </div>
-
+      <PageHeader title="Base de datos" description="Verificación en vivo de PostgreSQL: conexión, integridad y consistencia de lo que guarda la aplicación." action={<> <button className="btn btn--primary" onClick={recargar} disabled={cx.loading || v.loading}><Icon name="refresh" size={18} /> {cx.loading || v.loading ? 'Verificando...' : 'Verificar ahora'}</button> </>} />
       <section className="card vf-chain" aria-label="Cadena de conexión">
         {[['Navegador', 'React', 'user', true], ['API', 'FastAPI', 'network', !!cx.data], ['Base de datos', cx.data?.motor ?? 'PostgreSQL', 'layers', cx.data?.base_de_datos === 'ok']].map(([t, s, i, ok], k) => (
           <div key={t} className="vf-chain__step">

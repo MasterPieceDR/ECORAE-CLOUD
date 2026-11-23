@@ -25,11 +25,11 @@ export function ListaTareas({ grupos, compacta = false }) {
   if (!grupos.length) return <EmptyState title="¡Todo al día!" description="No tienes tareas pendientes en este momento." />;
   return (
     <div className={`tareas ${compacta ? 'tareas--compacta' : ''}`}>
-      {grupos.map((g, gi) => (
+      {(compacta ? grupos.slice(0, 4) : grupos).map((g, gi) => (
         <motion.section key={g.codigo} className="card tgroup" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: gi * .05 }}>
           <h2><span><Icon name={ICONO_ACCION[g.codigo] ?? 'arrow'} size={18} /></span>{g.titulo}<b>{g.objetos.length}</b></h2>
           <ul>
-            {g.objetos.slice(0, compacta ? 4 : 50).map((o) => (
+            {g.objetos.slice(0, compacta ? 2 : 50).map((o) => (
               <li key={o.codigo}>
                 <Link to={`/app/objetos/${o.codigo}?accion=${encodeURIComponent(g.codigo)}`}>
                   <b>{o.codigo}</b>
@@ -39,7 +39,7 @@ export function ListaTareas({ grupos, compacta = false }) {
               </li>
             ))}
           </ul>
-          {compacta && g.objetos.length > 4 && <Link to="/app/tareas" className="tgroup__more">Ver las {g.objetos.length}</Link>}
+          {compacta && g.objetos.length > 2 && <Link to="/app/tareas" className="tgroup__more">Ver todas ({g.objetos.length})</Link>}
         </motion.section>
       ))}
     </div>

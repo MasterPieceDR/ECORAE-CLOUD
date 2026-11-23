@@ -45,12 +45,6 @@ export function DashboardPage() {
           <Link className="btn btn--primary btn--sm" to="/app/perfil#solicitar">Solicitar acceso</Link>
         </section>
       )}
-      {operativo && (
-        <section>
-          <div className="dash__head"><h2 className="dash__h2"><Icon name="inbox" /> Qué hacer ahora</h2><Link to="/app/tareas" className="dash__all">Ver todas <Icon name="arrow" size={16} /></Link></div>
-          {tareas.loading ? <Skeleton h={160} /> : <ListaTareas grupos={tareas.data?.grupos ?? []} compacta />}
-        </section>
-      )}
       {!s ? <div className="kpis"><Skeleton h={150} /><Skeleton h={150} /><Skeleton h={150} /><Skeleton h={150} /></div> : (
         <section className="kpis" aria-label="Indicadores">
           <article className="kpi" data-tilt="5" data-rise><Icon name="box" size={22} /><b data-count={s.en_proceso}>{s.en_proceso}</b><span>En proceso</span><small>de {s.dispositivos} equipos visibles</small></article>
@@ -78,6 +72,12 @@ export function DashboardPage() {
           </section>
           <section className="card"><h2 className="dash__h2">Clasificación</h2><Chart label="Equipos por clasificación" option={dona} /></section>
         </div>
+      )}
+      {operativo && (
+        <section>
+          <div className="dash__head"><h2 className="dash__h2"><Icon name="inbox" /> Qué hacer ahora</h2><Link to="/app/tareas" className="dash__all">Ver todas ({tareas.data?.total ?? 0}) <Icon name="arrow" size={16} /></Link></div>
+          {tareas.loading ? <Skeleton h={160} /> : <ListaTareas grupos={tareas.data?.grupos ?? []} compacta />}
+        </section>
       )}
       <Proyeccion />
       {s && <div className="dash__col">

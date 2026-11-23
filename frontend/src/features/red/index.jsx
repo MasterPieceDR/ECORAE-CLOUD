@@ -1,3 +1,4 @@
+import { PageHeader } from '@/shared/ui/PageHeader';
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { api, formatDate } from '@/shared/api';
@@ -79,13 +80,10 @@ export function RedPage() {
 
   return (
     <>
-      <div className="page-head">
-        <div><h1 className="page-title">Red de flujo</h1><p className="page-sub">Flujo máximo y todos los cortes mínimos (Edmonds-Karp) sobre la red real G = (V, E, c) leída desde la base, en equipos por semana.</p></div>
-        <div className="actions-row">
+      <PageHeader title="Red de flujo" description="Flujo máximo y todos los cortes mínimos (Edmonds-Karp) sobre la red real G = (V, E, c) leída desde la base, en equipos por semana." action={<> <div className="actions-row">
           {red.data?.puede_editar && <button className="btn btn--ghost" onClick={() => setNuevo(true)}><Icon name="plus" size={18} /> Nuevo escenario</button>}
           {red.data?.puede_registrar && <button className="btn btn--primary" onClick={registrar} disabled={registrando || !r}><Icon name="check" size={18} /> {registrando ? 'Registrando...' : 'Registrar ejecución'}</button>}
-        </div>
-      </div>
+        </div> </>} />
       <div className="chips" role="group" aria-label="Escenarios">
         {(red.data?.escenarios ?? []).map((s) => (
           <button key={s.codigo} className="chip" aria-pressed={s.codigo === id} onClick={() => cambiarEscenario(s.codigo)} title={s.descripcion ?? ''}>

@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from 'motion/react';
 
 import { useAuth, useCatalogos } from '@/features/auth';
 
-import { coverFor, photo, api } from '@/shared/api';
+import { api } from '@/shared/api';
 
 import { aplicarTema } from '@/shared/styles/theme';
 
@@ -187,8 +187,6 @@ export function AppLayout() {
           <Link to="/app/perfil" className="top__me" title={`${user.alias} · ${nombreRol(rolPrincipal)}`}><Avatar name={user.alias} /></Link>
 
         </header>
-
-        <div className="cover" aria-hidden="true"><img key={coverFor(pathname)} src={photo(coverFor(pathname))} alt="" /></div>
 
         <main id="contenido" className="content">
 
