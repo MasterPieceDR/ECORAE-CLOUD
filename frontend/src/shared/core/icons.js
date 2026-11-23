@@ -1,5 +1,6 @@
 // Trazos de 24x24 para usar con fill="none" stroke="currentColor".
 export const ICONS = {
+  lock: 'M6 10h12v11H6zM8 10V7a4 4 0 018 0v3M12 14v3',
   clock: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2',
   circle: 'M12 3a9 9 0 100 18 9 9 0 000-18z',
   home: 'M3 11l9-8 9 8M5 9.5V21h5v-6h4v6h5V9.5',

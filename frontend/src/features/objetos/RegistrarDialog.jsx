@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { api } from '@/shared/api';
 import { useAuth, useCatalogos } from '@/features/auth';
 import { ModeloSerie } from './ModeloSerie';
+import { Field } from '@/shared/ui/Field';
 import { Modal } from '@/shared/ui/Modal';
 import { useToast } from '@/shared/ui/Toast';
 
@@ -45,6 +46,7 @@ export function RegistrarDialog({ onClose, onCreated }) {
   return (
     <Modal title="Registrar equipo" onClose={onClose} wide>
       <form className="accion-form" onSubmit={submit}>
+        <h3>Equipo</h3>
         <div className="two">
           <label className="field">Categoría *
             <select value={cat} onChange={(e) => { setCat(e.target.value); setAlmacenamiento(!!c.categorias.find((x) => x.codigo === e.target.value)?.contiene_almacenamiento); }}>
@@ -55,13 +57,15 @@ export function RegistrarDialog({ onClose, onCreated }) {
               ))}
             </select>
           </label>
-          <label className="field">Código (opcional)<input name="codigo" maxLength={40} pattern="[A-Za-z0-9][A-Za-z0-9_\-.]{1,39}" placeholder="Se asigna solo" /></label>
+          <Field label="Código (opcional)" help="Si lo dejas vacío, se asigna automáticamente."><input name="codigo" maxLength={40} pattern="[A-Za-z0-9][A-Za-z0-9_\-.]{1,39}" placeholder="Se asigna solo" /></Field>
         </div>
+        <h3>Características</h3>
         <div className="three">
-          <label className="field">Peso (kg) *<input name="peso" type="number" step="0.01" min="0.01" required /></label>
+          <Field label="Peso (kg) *" help="Ingresa un peso mayor que cero."><input name="peso" type="number" step="0.01" min="0.01" required /></Field>
 
-          <label className="field">Año<input name="anio" type="number" min="1970" max={new Date().getFullYear()} /></label>
+          <Field label="Año" help="Opcional."><input name="anio" type="number" min="1970" max={new Date().getFullYear()} /></Field>
         </div>
+        <h3>Identificación</h3>
         <div className="two"><ModeloSerie key={cat} categoria={cat} almacenamiento={almacenamiento} onAlmacenamiento={setAlmacenamiento} /></div>
         {(requeridos.length > 0 || extras.length > 0) && (
           <div className="three">

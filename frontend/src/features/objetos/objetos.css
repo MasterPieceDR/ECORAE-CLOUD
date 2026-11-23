@@ -85,3 +85,10 @@
 .crit__row input[type=checkbox] { width: 18px; height: 18px; min-height: 0; padding: 0; accent-color: var(--lime); }
 .radio-card__why { color: var(--danger) !important; }
 @media (max-width: 900px) { .filters { grid-template-columns: 1fr 1fr; } .crit__row { grid-template-columns: 1fr 1fr; } .crit__row > span { grid-column: 1 / -1; } }
+
+.filters { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.filter-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px; }
+.dialog .accion-form > .actions-row { position: sticky; bottom: -24px; z-index: 1; background: var(--surface); border-top: 1px solid var(--line); padding: 16px 0 8px; }
+.detail__actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.detail .tabs-row { flex-wrap: wrap; margin-bottom: 16px; }
+@media (max-width: 480px) { .filters { grid-template-columns: 1fr; } }

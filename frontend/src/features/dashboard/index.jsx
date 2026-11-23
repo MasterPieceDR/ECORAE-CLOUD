@@ -1,7 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth, useCatalogos } from '@/features/auth';
-import { api, photo, formatDate, DOCUMENTO } from '@/shared/api';
+import { api, formatDate, DOCUMENTO } from '@/shared/api';
 import { useAsync } from '@/shared/hooks/useAsync';
 import { useCinema } from '@/shared/hooks/useCinema';
 import { Skeleton } from '@/shared/ui/Skeleton';
@@ -31,8 +31,7 @@ export function DashboardPage() {
   const rol = user.roles[0];
   return (
     <div className="dash" ref={root}>
-      <section className="photo-banner dash__hero">
-        <img src={photo('bosque')} alt="" data-parallax="8" />
+      <section className="dash__hero">
         <div>
           <p className="dash__kicker">{nombreRol(rol?.codigo)}{rol?.centro ? ` · ${rol.centro}` : ''} · {user.organizacion?.nombre}</p>
           <h1 data-split data-now>¡Hola, <em>{user.alias.split('.')[0]}!</em></h1>
@@ -44,6 +43,12 @@ export function DashboardPage() {
           <Icon name="key" size={22} />
           <div><b>Tu cuenta tiene el rol base</b><p>Puedes consultar y aprender en Capacitación. Si trabajas en la red (generador, operador, técnico…), pide tu rol y un administrador lo aprobará.</p></div>
           <Link className="btn btn--primary btn--sm" to="/app/perfil#solicitar">Solicitar acceso</Link>
+        </section>
+      )}
+      {operativo && (
+        <section>
+          <div className="dash__head"><h2 className="dash__h2"><Icon name="inbox" /> Qué hacer ahora</h2><Link to="/app/tareas" className="dash__all">Ver todas <Icon name="arrow" size={16} /></Link></div>
+          {tareas.loading ? <Skeleton h={160} /> : <ListaTareas grupos={tareas.data?.grupos ?? []} compacta />}
         </section>
       )}
       {!s ? <div className="kpis"><Skeleton h={150} /><Skeleton h={150} /><Skeleton h={150} /><Skeleton h={150} /></div> : (
@@ -64,24 +69,20 @@ export function DashboardPage() {
           )}
         </section>
       )}
-      {operativo && (
-        <section>
-          <div className="dash__head"><h2 className="dash__h2"><Icon name="inbox" /> Tus tareas</h2><Link to="/app/tareas" className="dash__all">Ver todas <Icon name="arrow" size={16} /></Link></div>
-          {tareas.loading ? <Skeleton h={160} /> : <ListaTareas grupos={tareas.data?.grupos ?? []} compacta />}
-        </section>
-      )}
       {s && (
         <div className="dash__grid">
           <section className="card">
             <h2 className="dash__h2">Equipos por estado</h2>
             <Chart label="Equipos por estado; selecciona una barra para filtrar" option={barras} onClick={(p) => p.data?.codigo && navigate(`/app/objetos?estado=${encodeURIComponent(p.data.codigo)}`)} />
             <div aria-label="Filtrar equipos por estado">{estados.filter((e) => porEstado[e.codigo]).map((e) => <Link key={e.codigo} className="chip-link" to={`/app/objetos?estado=${encodeURIComponent(e.codigo)}`}>{e.nombre} ({porEstado[e.codigo]})</Link>)}</div>
-            <h2 className="dash__h2">Equipos por clasificación</h2><Chart label="Equipos por clasificación" option={dona} />
           </section>
-          <div className="dash__col">
+          <section className="card"><h2 className="dash__h2">Clasificación</h2><Chart label="Equipos por clasificación" option={dona} /></section>
+        </div>
+      )}
+      <Proyeccion />
+      {s && <div className="dash__col">
             {s.red && (
-              <section className="photo-banner dash__neck">
-                <img src={photo('rack')} alt="" />
+              <section className="card dash__neck">
                 <div>
                   <h2 className="dash__h2"><Icon name="alert" /> Cuello de botella hoy</h2>
                   {s.red.cortes[0]?.aristas.map(([a, b]) => <p key={a + b} className="neck"><code>{a} → {b}</code><b>ruta</b></p>)}
@@ -102,10 +103,7 @@ export function DashboardPage() {
                 {s.recientes.length === 0 && <li className="hint">Sin movimientos visibles.</li>}
               </ul>
             </section>
-          </div>
-        </div>
-      )}
-      <Proyeccion />
+          </div>}
       {s?.indicadores?.length > 0 && (
         <section className="card">
           <h2 className="dash__h2"><Icon name="leaf" /> Indicadores del periodo</h2>

@@ -10,3 +10,8 @@
 .tgroup li small { color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tgroup__more { color: var(--lime); font-size: 14px; font-weight: 600; }
 .tareas--compacta { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+
+.tgroup li a { grid-template-columns: minmax(0, 1fr) auto; }
+.tgroup li small { grid-column: 1 / -1; white-space: normal; }
+.tgroup li .btn { grid-column: 1 / -1; justify-self: start; }
+@media (max-width: 380px) { .tareas { grid-template-columns: minmax(0, 1fr); } }

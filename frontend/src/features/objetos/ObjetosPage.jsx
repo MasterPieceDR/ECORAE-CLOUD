@@ -10,6 +10,8 @@ import { StateBadge, ClasBadge } from '@/shared/ui/StateBadge';
 import { Modal } from '@/shared/ui/Modal';
 import { useToast } from '@/shared/ui/Toast';
 import { RegistrarDialog } from './RegistrarDialog';
+import { PageHeader } from '@/shared/ui/PageHeader';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import './objetos.css';
 
 export function ObjetosPage() {
@@ -18,11 +20,12 @@ export function ObjetosPage() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const filtros = { q: params.get('q') ?? '', estado: params.get('estado') ?? '', clasificacion: params.get('clasificacion') ?? '', tipo: params.get('tipo') ?? '', centro: params.get('centro') ?? '', serie: params.get('serie') ?? '' };
-  const { data, loading, error, reload } = useAsync(() => api.objetos(filtros), [params.toString()]);
+  const categoria = params.get('categoria') ?? '';
+  const { data, loading, error, reload } = useAsync(() => api.objetos(categoria ? { ...filtros, limite: 500 } : filtros), [params.toString()]);
   const [sel, setSel] = useState(new Set());
   const [dialogo, setDialogo] = useState(null);
   const set = (k) => (e) => { const p = new URLSearchParams(params); if (e.target.value) p.set(k, e.target.value); else p.delete(k); setParams(p, { replace: true }); };
-  const objetos = data?.objetos ?? [];
+  const objetos = (data?.objetos ?? []).filter((o) => !categoria || o.categoria === categoria || o.categoria_nombre === c.categorias.find((x) => x.codigo === categoria)?.nombre);
   const elegidos = objetos.filter((o) => sel.has(o.uid));
   const toggle = (uid) => setSel((s) => { const n = new Set(s); if (n.has(uid)) n.delete(uid); else n.add(uid); return n; });
   const puedeLote = can('LOTE.GESTIONAR') && elegidos.length >= 2 && elegidos.every((o) => o.tipo_objeto === 'DISPOSITIVO' && !o.lote_codigo);
@@ -30,12 +33,10 @@ export function ObjetosPage() {
 
   return (
     <>
-      <div className="page-head">
-        <div><h1 className="page-title">Equipos y lotes</h1><p className="page-sub">Cada objeto con su identificador único, su estado y su historia completa{data ? ` · ${data.total} visibles para ti` : ''}.</p></div>
-        {can('OBJETO.REGISTRAR') && <button className="btn btn--primary" onClick={() => setDialogo('registrar')}><Icon name="plus" size={18} /> Registrar equipo</button>}
-      </div>
+      <PageHeader title="Equipos y lotes" description={`Cada objeto con su identificador único, estado e historia${data ? ` · ${data.total} visibles para ti` : ''}.`} action={can('OBJETO.REGISTRAR') && <button className="btn btn--primary" onClick={() => setDialogo('registrar')}><Icon name="plus" size={18} /> Registrar equipo</button>} />
       <div className="filters">
         <label className="field"><span className="sr">Buscar</span><input type="search" placeholder="Código, categoría, marca, serie, lote u origen" value={filtros.q} onChange={set('q')} /></label>
+        <label className="field">Categoría<select value={categoria} onChange={set('categoria')}><option value="">Todas las categorías</option>{c.categorias.filter((x) => x.nivel >= 3).map((x) => <option key={x.codigo} value={x.codigo}>{x.nombre}</option>)}</select></label>
         <label className="field">Serie exacta<input value={filtros.serie} onChange={set('serie')} /></label>
         <label className="field"><span className="sr">Estado</span>
           <select value={filtros.estado} onChange={set('estado')}><option value="">Todos los estados</option>{c.estados.map((s) => <option key={s.codigo} value={s.codigo}>{s.nombre}</option>)}</select>
@@ -48,6 +49,7 @@ export function ObjetosPage() {
         </label>
       </div>
 
+      {Object.entries({ ...filtros, categoria }).some(([, v]) => v) && <div className="filter-chips" aria-label="Filtros activos">{Object.entries({ ...filtros, categoria }).filter(([, v]) => v).map(([k, v]) => <button key={k} className="chip" onClick={() => { const p = new URLSearchParams(params); p.delete(k); setParams(p, { replace: true }); }} aria-label={`Quitar filtro ${k}: ${v}`}>{k}: {v} ×</button>)}<button className="link" onClick={() => setParams({}, { replace: true })}>Limpiar filtros</button></div>}
       <AnimatePresence>
         {sel.size > 0 && (
           <motion.div className="bulk" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
@@ -60,7 +62,7 @@ export function ObjetosPage() {
       </AnimatePresence>
 
       {error && <p className="error" role="alert">{error.message}</p>}
-      {loading && !data ? <Skeleton h={320} /> : objetos.length === 0 ? <p className="empty card">No hay objetos con esos filtros.</p> : (
+      {loading && !data ? <Skeleton h={320} /> : objetos.length === 0 ? <EmptyState title="No encontramos equipos" description="Prueba otros filtros o limpia la búsqueda para ver más resultados." /> : (
         <div className="card devices">
           <table>
             <thead><tr><th><span className="sr">Seleccionar</span></th><th>Código</th><th>Equipo</th><th>Serie</th><th>Origen</th><th>Ubicación</th><th>Clasificación</th><th>Estado</th><th><span className="sr">Abrir</span></th></tr></thead>

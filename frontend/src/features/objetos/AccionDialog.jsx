@@ -4,6 +4,8 @@ import { useCatalogos } from '@/features/auth';
 import { ModeloSerie } from './ModeloSerie';
 import { Modal } from '@/shared/ui/Modal';
 import { EvidenciaInput } from '@/shared/ui/EvidenciaInput';
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
+import { Field } from '@/shared/ui/Field';
 import { useToast } from '@/shared/ui/Toast';
 
 // Un formulario por acción. El contexto (centros, destinos, criterios, tipos de evidencia) lo calcula el backend
@@ -13,6 +15,7 @@ export function AccionDialog({ accion, objeto, dispositivo, onClose, onDone }) {
   const [error, setError] = useState('');
   const [fase, setFase] = useState('');
   const [progreso, setProgreso] = useState(null);
+  const [confirmar, setConfirmar] = useState(null);
   const ctx = accion.contexto;
   const Form = FORMS[accion.codigo];
 
@@ -37,9 +40,9 @@ export function AccionDialog({ accion, objeto, dispositivo, onClose, onDone }) {
   };
 
   return (
-    <Modal title={accion.titulo} onClose={onClose} wide={accion.codigo === 'EVALUAR'}>
+    <> <Modal title={accion.titulo} onClose={onClose} wide={accion.codigo === 'EVALUAR'}>
       <p className="hint">{accion.descripcion}</p>
-      <Form ctx={ctx} objeto={objeto} dispositivo={dispositivo} ejecutar={ejecutar} ocupado={!!fase}>
+      <Form ctx={ctx} objeto={objeto} dispositivo={dispositivo} ejecutar={accion.codigo === 'ANULAR' ? (fn) => setConfirmar(() => fn) : ejecutar} ocupado={!!fase}>
         {error && <p className="error" role="alert">{error}</p>}
         {progreso !== null && <div className="progress" role="progressbar" aria-valuenow={progreso} aria-valuemin="0" aria-valuemax="100"><i style={{ width: `${progreso}%` }} /></div>}
         <div className="actions-row">
@@ -47,7 +50,7 @@ export function AccionDialog({ accion, objeto, dispositivo, onClose, onDone }) {
           <button className={`btn ${accion.codigo === 'ANULAR' ? 'btn--danger' : 'btn--primary'}`} disabled={!!fase}>{fase || (accion.codigo === 'ANULAR' ? 'Anular registro' : 'Confirmar')}</button>
         </div>
       </Form>
-    </Modal>
+    </Modal>{confirmar && <ConfirmDialog title="Anular registro" description={`Se anulará ${objeto.codigo}. Esta acción no se puede deshacer.`} confirmLabel="Anular registro" onClose={() => setConfirmar(null)} onConfirm={() => { const fn = confirmar; setConfirmar(null); ejecutar(fn); }} />}</>
   );
 }
 
@@ -63,8 +66,8 @@ function Solicitar({ ctx, objeto, ejecutar, children }) {
     <Formulario onSubmit={(e) => { const d = datos(e); ejecutar(() => api.solicitar({ objetos: [objeto.uid], centro_destino: d.centro, fecha_preferida: nulo(d.fecha), sector: nulo(d.sector) })); }}>
       <label className="field">Centro de acopio<select name="centro" required>{ctx.centros.map((c) => <option key={c.codigo} value={c.codigo}>{c.codigo} · {c.nombre}</option>)}</select></label>
       <div className="two">
-        <label className="field">Fecha preferida<input name="fecha" type="date" min={new Date().toISOString().slice(0, 10)} /></label>
-        <label className="field">Sector de referencia<input name="sector" maxLength={120} placeholder="Ej.: Campus norte" /></label>
+        <Field label="Fecha preferida" help="Opcional."><input name="fecha" type="date" min={new Date().toISOString().slice(0, 10)} /></Field>
+        <Field label="Sector de referencia" help="Opcional."><input name="sector" maxLength={120} placeholder="Ej.: Campus norte" /></Field>
       </div>
       <p className="hint">Solo se guarda el sector, no la dirección exacta (minimización de datos, RNF-10).</p>
       {children}
@@ -78,8 +81,8 @@ function Programar({ ctx, ejecutar, children }) {
     <Formulario onSubmit={(e) => { const d = datos(e); ejecutar(() => api.programar(ctx.solicitud, { fecha: new Date(d.fecha).toISOString(), transportista: nulo(d.transportista) })); }}>
       <p className="note">Solicitud <b>{ctx.numero}</b> hacia <b>{ctx.centro}</b>. La base comprueba que la ruta generador → acopio tenga capacidad libre esta semana (RN-05).</p>
       <div className="two">
-        <label className="field">Fecha y hora<input name="fecha" type="datetime-local" required defaultValue={manana} /></label>
-        <label className="field">Transporte<input name="transportista" maxLength={120} placeholder="Camión 01" /></label>
+        <Field label="Fecha y hora" help="Campo obligatorio."><input name="fecha" type="datetime-local" required defaultValue={manana} /></Field>
+        <Field label="Transporte" help="Opcional."><input name="transportista" maxLength={120} placeholder="Camión 01" /></Field>
       </div>
       {children}
     </Formulario>
@@ -102,7 +105,7 @@ function Recibir({ ctx, objeto, ejecutar, children }) {
       </div>
       <div className="two">
         <label className="field">Conformidad<select name="conformidad"><option value="CONFORME">Conforme</option><option value="OBSERVADA">Con observaciones</option><option value="RECHAZADA">Rechazada</option></select></label>
-        <label className="field">Peso verificado (kg)<input name="peso" type="number" step="0.01" min="0" placeholder={objeto.peso_kg ?? ''} /></label>
+        <Field label="Peso verificado (kg)" help="Opcional."><input name="peso" type="number" step="0.01" min="0" placeholder={objeto.peso_kg ?? ''} /></Field>
       </div>
       <EvidenciaInput tipos={ctx.evidencias} value={ev} onChange={setEv} />
       {children}
@@ -140,7 +143,7 @@ function Evaluar({ ctx, objeto, ejecutar, children }) {
       </fieldset>
       <div className="two">
         <label className="field">Destino sugerido *<select name="destino" required disabled={!clas} key={clas}>{opciones.map((x) => <option key={x} value={x}>{nombreDestino(x)}</option>)}</select></label>
-        <label className="field">Puntaje (0–100)<input name="puntaje" type="number" min="0" max="100" /></label>
+        <Field label="Puntaje (0–100)" help="Opcional."><input name="puntaje" type="number" min="0" max="100" /></Field>
       </div>
       <div className="crit">
         <b>Criterios</b>
@@ -207,9 +210,9 @@ function Transferir({ ctx, objeto, ejecutar, children }) {
         {sel?.ubicaciones?.length > 0 && (
           <label className="field">Ubicación de destino<select name="ubicacion">{sel.ubicaciones.filter((u) => u.tipo !== 'RAIZ').map((u) => <option key={u.codigo} value={u.codigo}>{u.nombre}</option>)}<option value="">Raíz del centro</option></select></label>
         )}
-        <label className="field">Transporte<input name="transportista" maxLength={120} placeholder="Camión 02" /></label>
+        <Field label="Transporte" help="Opcional."><input name="transportista" maxLength={120} placeholder="Camión 02" /></Field>
       </div>
-      {sel?.tipo === 'BENEFICIARIO' && <label className="field">Criterio de asignación<input name="criterio" maxLength={200} defaultValue="Programa de inclusión digital" /></label>}
+      {sel?.tipo === 'BENEFICIARIO' && <Field label="Criterio de asignación" help="Opcional."><input name="criterio" maxLength={200} defaultValue="Programa de inclusión digital" /></Field>}
       {!permitido.length && <p className="note" data-tone="aviso">Ningún destino es válido ahora: revisa los motivos de cada uno.</p>}
       {children}
     </Formulario>
@@ -266,7 +269,7 @@ function Tratamiento({ ctx, objeto, ejecutar, children }) {
           {limite && suma > limite && <p className="error">Las fracciones superan el peso del equipo: la base rechazará el registro.</p>}
         </div>
       )}
-      <label className="field">Observación<input name="observacion" maxLength={500} /></label>
+      <Field label="Observación" help="Opcional."><input name="observacion" maxLength={500} /></Field>
       <EvidenciaInput tipos={ctx.evidencias} value={ev} onChange={setEv} />
       {children}
     </Formulario>
@@ -279,7 +282,7 @@ function Cerrar({ ctx, objeto, ejecutar, children }) {
   return (
     <Formulario onSubmit={(e) => { const d = datos(e); ejecutar(async ({ subir }) => api.cerrar({ objeto: objeto.uid, evidencias: [await subir(ev)], observacion: nulo(d.observacion) })); }}>
       <p className="note">Destino final: <b>{nombreDestino(ctx.destino)}</b>. Con el cierre, la trazabilidad queda completa (RN-08).</p>
-      <label className="field">Observación<input name="observacion" maxLength={500} placeholder="Ej.: Equipo en uso en la escuela" /></label>
+      <Field label="Observación" help="Opcional."><input name="observacion" maxLength={500} placeholder="Ej.: Equipo en uso en la escuela" /></Field>
       <EvidenciaInput tipos={ctx.evidencias} value={ev} onChange={setEv} />
       {children}
     </Formulario>
@@ -290,7 +293,7 @@ function Desagrupar({ objeto, ejecutar, children }) {
   return (
     <Formulario onSubmit={(e) => { const d = datos(e); ejecutar(() => api.desagrupar(objeto.uid, nulo(d.observacion))); }}>
       <p className="note">El lote pasa a «Desagrupado» y cada equipo sigue su camino por separado. La composición anterior queda en el historial.</p>
-      <label className="field">Observación<input name="observacion" maxLength={300} defaultValue="Se evalúa cada equipo por separado" /></label>
+      <Field label="Observación" help="Opcional."><input name="observacion" maxLength={300} defaultValue="Se evalúa cada equipo por separado" /></Field>
       {children}
     </Formulario>
   );
@@ -320,15 +323,15 @@ function Editar({ objeto, dispositivo: d, ejecutar, children }) {
       <p className="note">{objeto.codigo} · {categoria?.nombre ?? d?.categoria_nombre}. El código y la categoría no se cambian: si están mal, anula el registro y créalo de nuevo.</p>
       <div className="two">
         <ModeloSerie categoria={d?.categoria} inicial={{ ...d, marca }} excluir={objeto.uid} almacenamiento={almacenamiento} onAlmacenamiento={setAlmacenamiento} />
-        <label className="field">Año<input name="anio" type="number" min="1970" max="2100" defaultValue={d?.anio_fabricacion ?? ''} /></label>
-        <label className="field">Peso (kg) *<input name="peso" type="number" step="0.01" min="0.01" max="2000" required defaultValue={d?.peso_kg ?? ''} /></label>
+        <Field label="Año" help="Opcional."><input name="anio" type="number" min="1970" max="2100" defaultValue={d?.anio_fabricacion ?? ''} /></Field>
+        <Field label="Peso (kg) *" help="Campo obligatorio."><input name="peso" type="number" step="0.01" min="0.01" max="2000" required defaultValue={d?.peso_kg ?? ''} /></Field>
         {claves.map((k) => (
           <label key={k} className="field">{ETIQUETA[k] ?? k.replace(/_/g, ' ')}{requeridos.includes(k) ? ' *' : ''}
             <input name={`a_${k}`} type={NUMERICO.test(k) ? 'number' : 'text'} step="any" min={NUMERICO.test(k) ? 0 : undefined} required={requeridos.includes(k)} defaultValue={d?.atributos?.[k] ?? ''} />
           </label>
         ))}
       </div>
-      <label className="field">¿Qué corriges? *<input name="motivo" required minLength={5} maxLength={300} placeholder="Ej.: peso mal digitado en el registro" /></label>
+      <Field label="¿Qué corriges? *" help="Campo obligatorio."><input name="motivo" required minLength={5} maxLength={300} placeholder="Ej.: peso mal digitado en el registro" /></Field>
       {children}
     </Formulario>
   );
@@ -339,7 +342,7 @@ function Anular({ objeto, ejecutar, children }) {
   return (
     <Formulario onSubmit={(e) => { const f = datos(e); ejecutar(() => api.anularObjeto(objeto.uid, f.motivo)); }}>
       <p className="note" data-tone="aviso">{objeto.codigo} dejará de aparecer como equipo activo. No se borra: en un sistema de trazabilidad nada se elimina físicamente, para que siempre se pueda auditar qué pasó.</p>
-      <label className="field">Motivo *<input name="motivo" required minLength={5} maxLength={300} defaultValue="Registro duplicado" /></label>
+      <Field label="Motivo *" help="Explica por qué se anula el registro."><input name="motivo" required minLength={5} maxLength={300} defaultValue="Registro duplicado" /></Field>
       {children}
     </Formulario>
   );

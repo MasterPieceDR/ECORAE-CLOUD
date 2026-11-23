@@ -52,3 +52,9 @@
 
 .proyeccion-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
 @media (max-width: 620px) { .proyeccion-filters { grid-template-columns: 1fr; } }
+
+.dash__hero { min-height: 0; padding: 24px; background: var(--secondary-soft); border: 1px solid var(--line); border-radius: 16px; }
+.dash__hero h1 { font-size: clamp(30px, 4vw, 46px); }
+.dash__kicker { color: var(--primary-strong); letter-spacing: .04em; }
+.dash__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 800px) { .dash__grid { grid-template-columns: minmax(0, 1fr); } }
