@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import Response
 
 from .. import almacen, db, flujo
 from ..config import config
@@ -91,17 +91,7 @@ async def almacen_put(bucket: str, clave: str, expira: int, firma: str, request:
     if config().almacen_modo != "local":
         raise ErrorAPI(404, "No disponible", "HTTP")
     almacen.verificar_firma("PUT", bucket, clave, expira, firma)
-    destino = almacen.ruta_local(bucket, clave)
-    destino.parent.mkdir(parents=True, exist_ok=True)
-    tamano = 0
-    with destino.open("wb") as f:
-        async for trozo in request.stream():
-            tamano += len(trozo)
-            if tamano > 500 * 1024 * 1024:
-                f.close()
-                destino.unlink(missing_ok=True)
-                raise ErrorAPI(413, "Archivo demasiado grande", "ALMACEN")
-            f.write(trozo)
+    await almacen.actual().recibir(bucket, clave, request)
     return Response(status_code=200)
 
 
@@ -110,10 +100,5 @@ async def almacen_get(bucket: str, clave: str, expira: int, firma: str):
     if config().almacen_modo != "local":
         raise ErrorAPI(404, "No disponible", "HTTP")
     almacen.verificar_firma("GET", bucket, clave, expira, firma)
-    ruta = almacen.ruta_local(bucket, clave)
-    if ruta.exists():
-        return FileResponse(ruta)
-    if clave.startswith("demo/"):
-        contenido, tipo = almacen.placeholder(clave)
-        return Response(contenido, media_type=tipo)
-    raise ErrorAPI(404, "Archivo no encontrado en el almacén", "ALMACEN")
+    return almacen.actual().respuesta(bucket, clave)
+

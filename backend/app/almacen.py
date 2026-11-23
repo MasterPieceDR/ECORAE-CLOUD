@@ -19,7 +19,7 @@ from urllib.parse import quote, urlencode
 from .config import config
 from .errores import ErrorAPI
 
-EXT = {"image/jpeg": ".jpg", "image/png": ".png", "application/pdf": ".pdf", "video/mp4": ".mp4", "video/webm": ".webm",
+EXT = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "application/pdf": ".pdf", "video/mp4": ".mp4", "video/webm": ".webm",
        "video/quicktime": ".mov", "video/x-msvideo": ".avi"}
 
 
@@ -30,7 +30,7 @@ def nueva_clave(prefijo: str, mime: str) -> str:
 
 def _s3():
     import boto3
-    return boto3.client("s3", region_name=config().aws_region)
+    return boto3.client("s3", region_name=config().aws_region, endpoint_url=config().aws_endpoint_url)
 
 
 def _firma(metodo: str, bucket: str, clave: str, expira: int) -> str:
@@ -42,27 +42,6 @@ def verificar_firma(metodo: str, bucket: str, clave: str, expira: int, firma: st
         raise ErrorAPI(403, "Enlace vencido o inválido", "FIRMA")
 
 
-def url_subida(bucket: str, clave: str, mime: str, ttl: int = 900) -> dict:
-    c = config()
-    if c.almacen_modo == "s3":
-        url = _s3().generate_presigned_url("put_object", Params={"Bucket": bucket, "Key": clave, "ContentType": mime}, ExpiresIn=ttl)
-        return {"url": url, "metodo": "PUT", "cabeceras": {"Content-Type": mime}}
-    expira = int(time.time()) + ttl
-    q = urlencode({"expira": expira, "firma": _firma("PUT", bucket, clave, expira)})
-    return {"url": f"/api/v1/almacen/{bucket}/{quote(clave)}?{q}", "metodo": "PUT", "cabeceras": {"Content-Type": mime}}
-
-
-def url_descarga(bucket: str, clave: str, ttl: int = 300, nombre: str | None = None) -> str:
-    c = config()
-    if c.almacen_modo == "s3":
-        params = {"Bucket": bucket, "Key": clave}
-        if nombre:
-            params["ResponseContentDisposition"] = f'inline; filename="{nombre}"'
-        return _s3().generate_presigned_url("get_object", Params=params, ExpiresIn=ttl)
-    expira = int(time.time()) + ttl
-    return f"/api/v1/almacen/{bucket}/{quote(clave)}?" + urlencode({"expira": expira, "firma": _firma("GET", bucket, clave, expira)})
-
-
 def ruta_local(bucket: str, clave: str) -> Path:
     base = Path(config().almacen_dir).resolve()
     p = (base / bucket / clave).resolve()
@@ -71,32 +50,129 @@ def ruta_local(bucket: str, clave: str) -> Path:
     return p
 
 
-def verificar_objeto(bucket: str, clave: str, sha256: str, tamano: int, mime: str) -> bool:
-    """Comprueba que el archivo subido existe y coincide con lo declarado. Devuelve si está libre de metadatos EXIF/GPS."""
-    c = config()
-    if c.almacen_modo == "s3":
-        try:
-            meta = _s3().head_object(Bucket=bucket, Key=clave)
-        except Exception:
-            raise ErrorAPI(422, "El archivo no llegó al almacén. Vuelve a subirlo.", "ALMACEN")
-        if int(meta["ContentLength"]) != int(tamano):
-            raise ErrorAPI(422, "El tamaño del archivo no coincide con lo declarado.", "ALMACEN")
-        return True          # las imágenes se limpian en el navegador antes de subir; un Lambda puede reverificarlas
-    p = ruta_local(bucket, clave)
-    if not p.exists():
-        raise ErrorAPI(422, "El archivo no llegó al almacén. Vuelve a subirlo.", "ALMACEN")
-    datos = p.read_bytes()
+def _verificar_datos(datos: bytes, sha256: str, tamano: int, mime: str) -> bool:
     if len(datos) != int(tamano) or hashlib.sha256(datos).hexdigest() != sha256:
-        raise ErrorAPI(422, "La huella SHA-256 del archivo no coincide con la declarada.", "ALMACEN")
+        raise ErrorAPI(422, "El tamaño o la huella SHA-256 no coincide con lo declarado.", "ALMACEN")
     if mime.startswith("image/"):
         try:
             from PIL import Image
             with Image.open(io.BytesIO(datos)) as img:
-                exif = img.getexif()
-                return len(exif) == 0 and not img.info.get("exif")
+                formatos = {"image/jpeg": "JPEG", "image/png": "PNG", "image/webp": "WEBP"}
+                if formatos.get(mime) != img.format:
+                    raise ValueError("El formato no coincide")
+                img.load()
+                return len(img.getexif()) == 0 and not img.info.get("exif")
         except Exception:
-            raise ErrorAPI(422, "La imagen no se pudo leer.", "ALMACEN")
+            raise ErrorAPI(422, "La imagen no se pudo leer o no coincide con el formato declarado.", "ALMACEN")
     return True
+
+
+class AlmacenLocal:
+    def url_subida(self, bucket: str, clave: str, mime: str, ttl: int = 900) -> dict:
+        expira = int(time.time()) + ttl
+        q = urlencode({"expira": expira, "firma": _firma("PUT", bucket, clave, expira)})
+        return {"url": f"/api/v1/almacen/{bucket}/{quote(clave)}?{q}", "metodo": "PUT", "cabeceras": {"Content-Type": mime}}
+
+    def url_descarga(self, bucket: str, clave: str, ttl: int = 300, nombre: str | None = None) -> str:
+        expira = int(time.time()) + ttl
+        return f"/api/v1/almacen/{bucket}/{quote(clave)}?" + urlencode({"expira": expira, "firma": _firma("GET", bucket, clave, expira)})
+
+    def verificar_objeto(self, bucket: str, clave: str, sha256: str, tamano: int, mime: str) -> bool:
+        p = ruta_local(bucket, clave)
+        if not p.is_file():
+            raise ErrorAPI(422, "El archivo no llegó al almacén. Vuelve a subirlo.", "ALMACEN")
+        return _verificar_datos(p.read_bytes(), sha256, tamano, mime)
+
+    def eliminar(self, bucket: str, clave: str) -> None:
+        ruta_local(bucket, clave).unlink(missing_ok=True)
+
+    async def recibir(self, bucket: str, clave: str, request) -> None:
+        destino = ruta_local(bucket, clave)
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        tamano = 0
+        with destino.open("wb") as archivo:
+            async for trozo in request.stream():
+                tamano += len(trozo)
+                if tamano > 500 * 1024 * 1024:
+                    archivo.close()
+                    destino.unlink(missing_ok=True)
+                    raise ErrorAPI(413, "Archivo demasiado grande", "ALMACEN")
+                archivo.write(trozo)
+
+    def respuesta(self, bucket: str, clave: str):
+        from fastapi.responses import FileResponse, Response
+        ruta = ruta_local(bucket, clave)
+        if ruta.exists():
+            return FileResponse(ruta)
+        if clave.startswith("demo/"):
+            contenido, tipo = placeholder(clave)
+            return Response(contenido, media_type=tipo)
+        raise ErrorAPI(404, "Archivo no encontrado en el almacén", "ALMACEN")
+
+
+class AlmacenS3:
+    def url_subida(self, bucket: str, clave: str, mime: str, ttl: int = 900) -> dict:
+        url = _s3().generate_presigned_url("put_object", Params={"Bucket": bucket, "Key": clave, "ContentType": mime}, ExpiresIn=ttl)
+        return {"url": url, "metodo": "PUT", "cabeceras": {"Content-Type": mime}}
+
+    def url_descarga(self, bucket: str, clave: str, ttl: int = 300, nombre: str | None = None) -> str:
+        params = {"Bucket": bucket, "Key": clave}
+        if nombre:
+            params["ResponseContentDisposition"] = f'inline; filename="{nombre}"'
+        return _s3().generate_presigned_url("get_object", Params=params, ExpiresIn=ttl)
+
+    def verificar_objeto(self, bucket: str, clave: str, sha256: str, tamano: int, mime: str) -> bool:
+        try:
+            cliente = _s3()
+            if not mime.startswith("image/"):
+                objeto = cliente.head_object(Bucket=bucket, Key=clave)
+                if int(objeto["ContentLength"]) != int(tamano):
+                    raise ErrorAPI(422, "El tamaño del archivo no coincide con lo declarado.", "ALMACEN")
+                return True
+            if tamano > 10 * 1024 * 1024:
+                raise ErrorAPI(422, "La imagen supera el límite de 10 MB.", "ALMACEN")
+            objeto = cliente.get_object(Bucket=bucket, Key=clave)
+            cuerpo = objeto["Body"]
+            try:
+                if int(objeto["ContentLength"]) != int(tamano):
+                    raise ErrorAPI(422, "El tamaño del archivo no coincide con lo declarado.", "ALMACEN")
+                datos = cuerpo.read(tamano + 1)
+            finally:
+                cuerpo.close()
+        except ErrorAPI:
+            raise
+        except Exception:
+            raise ErrorAPI(422, "El archivo no llegó al almacén. Vuelve a subirlo.", "ALMACEN")
+        return _verificar_datos(datos, sha256, tamano, mime)
+
+    def eliminar(self, bucket: str, clave: str) -> None:
+        _s3().delete_object(Bucket=bucket, Key=clave)
+
+
+def actual() -> AlmacenLocal | AlmacenS3:
+    modo = config().almacen_modo
+    if modo == "local":
+        return AlmacenLocal()
+    if modo == "s3":
+        return AlmacenS3()
+    raise RuntimeError(f"ALMACEN_MODO desconocido: {modo}")
+
+
+# Conserva las llamadas existentes mientras los routers migran a la interfaz.
+def url_subida(*args, **kwargs):
+    return actual().url_subida(*args, **kwargs)
+
+
+def url_descarga(*args, **kwargs):
+    return actual().url_descarga(*args, **kwargs)
+
+
+def verificar_objeto(*args, **kwargs):
+    return actual().verificar_objeto(*args, **kwargs)
+
+
+def eliminar(*args, **kwargs):
+    return actual().eliminar(*args, **kwargs)
 
 
 def placeholder(clave: str) -> tuple[bytes, str]:

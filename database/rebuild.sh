@@ -9,3 +9,4 @@ psql -d ecoraee -v ON_ERROR_STOP=1 -q -1 -f 13_mejoras.sql && echo "ok 13_mejora
 psql -d ecoraee -v ON_ERROR_STOP=1 -q -1 -f 14_dispositivos.sql && echo "ok 14_dispositivos.sql"
 psql -d ecoraee -v ON_ERROR_STOP=1 -q -1 -f 15_verificacion.sql && echo "ok 15_verificacion.sql"
 psql -d ecoraee -v ON_ERROR_STOP=1 -q -1 -f 16_rendimiento.sql && echo "ok 16_rendimiento.sql"
+psql -d ecoraee -v ON_ERROR_STOP=1 -q -1 -f 17_catalogo_serie_imagenes.sql && echo "ok 17_catalogo_serie_imagenes.sql"

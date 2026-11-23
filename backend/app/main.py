@@ -49,7 +49,7 @@ app = FastAPI(title="EcoRAEE Cloud API", version=config().version, lifespan=vida
                           "Todas las escrituras pasan por funciones api.* de PostgreSQL que aplican RN-01…RN-09.")
 
 app.add_middleware(CORSMiddleware, allow_origins=config().origenes, allow_credentials=False,
-                   allow_methods=["GET", "POST", "PUT"], allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+                   allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"], allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
                    expose_headers=["X-Request-ID"])
 
 

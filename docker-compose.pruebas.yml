@@ -1,0 +1,53 @@
+# EcoRAEE Cloud — pruebas de integración en contenedores (no necesita PostgreSQL ni Python instalados en la PC).
+#   docker compose -f docker-compose.pruebas.yml run --rm pruebas            # suite de la API (pytest)
+#   docker compose -f docker-compose.pruebas.yml run --rm pruebas base       # 84 pruebas de la base (06_pruebas.sql)
+#   docker compose -f docker-compose.pruebas.yml down -v                     # limpiar
+# Las claves de este archivo son solo para el contenedor efímero de pruebas.
+name: ecoraee-pruebas
+
+services:
+  pg:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pruebas_local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      retries: 30
+    tmpfs: [/var/lib/postgresql/data]
+
+  pruebas:
+    image: python:3.13-slim
+    working_dir: /repo/backend
+    volumes:
+      - ./:/repo
+      - pip-cache:/root/.cache/pip
+    environment:
+      PGHOST: pg
+      PGUSER: postgres
+      PGPASSWORD: pruebas_local
+      DB_HOST: pg
+      DB_CLAVE_API: api_dev_pass
+      DB_CLAVE_MCP: mcp_dev_pass
+      ECORAEE_MATH: /repo/math
+      PYTHONDONTWRITEBYTECODE: "1"
+    entrypoint:
+      - bash
+      - -c
+      - |
+        set -e
+        apt-get -qq update >/dev/null && apt-get -qq install -y postgresql-client >/dev/null
+        if ls /repo/backend/wheels/*.whl >/dev/null 2>&1; then pip install -q --find-links /repo/backend/wheels -r requirements-dev.txt; else pip install -q -r requirements-dev.txt; fi
+        if [ "$${1:-api}" = "base" ]; then
+          cd /repo/database && ./run.sh && psql -d ecoraee -v ON_ERROR_STOP=1 -q -1 -f 10_integracion.sql && psql -d ecoraee -f 06_pruebas.sql
+        else
+          python -m pytest -q -p no:cacheprovider "$${@:2}"
+        fi
+      - "--"
+    command: ["api"]
+    depends_on:
+      pg: { condition: service_healthy }
+
+volumes:
+  pip-cache:
