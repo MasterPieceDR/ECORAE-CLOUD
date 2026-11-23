@@ -1,0 +1,1 @@
+.theme-select select { min-height: 40px; max-width: 100px; padding: 0 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }

@@ -5,6 +5,7 @@ import { cursor, particles, preloader, scrollToId } from '@/shared/cinema/index.
 import { useCinema } from '@/shared/hooks/useCinema';
 import { Logo, LogoMark } from '@/shared/ui/Logo';
 import { Icon } from '@/shared/ui/Icon';
+import { ThemeSelect } from '@/shared/ui/ThemeSelect';
 import './landing.css';
 
 const COLUMNS = [GALLERY.slice(0, 3), GALLERY.slice(3, 6), GALLERY.slice(6, 9)];
@@ -36,6 +37,7 @@ export function LandingPage() {
           <a href="#plataforma" onClick={jump('plataforma')}>Plataforma</a>
           <a href="#aprende" onClick={jump('aprende')}>Aprende</a>
           <Link to="/login" className="btn btn--ghost btn--sm">Ingresar</Link><Link to="/login" state={{ registro: true }} className="btn btn--primary btn--sm">Crear cuenta</Link>
+          <ThemeSelect />
         </nav>
         <button className="lp-burger" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label="Abrir menú"><Icon name={open ? 'close' : 'menu'} /></button>
       </header>

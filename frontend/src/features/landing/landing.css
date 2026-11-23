@@ -104,11 +104,14 @@
 .foot__big { font-size: 19.5vw; line-height: 1; font-weight: 600; letter-spacing: -.05em; text-align: center; color: transparent; background: linear-gradient(color-mix(in srgb, var(--primary) 50%, transparent), transparent); -webkit-background-clip: text; background-clip: text; }
 .foot > div { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--line); padding-top: 20px; color: var(--muted); font-size: 14px; }
 .foot > div p { max-width: 62ch; }
-@media (max-width: 899px) {
+@media (max-width: 1050px) {
   .lp-burger { display: grid; }
   .lp-nav nav { position: absolute; inset: 100% 12px auto 12px; display: none; flex-direction: column; align-items: stretch; gap: 4px; background: color-mix(in srgb, var(--bg) 97%, transparent); border: 1px solid var(--line); border-radius: 20px; padding: 12px 16px 16px; }
   .lp-nav nav.is-open { display: flex; }
+  .lp-nav .theme-select select { width: 100%; max-width: none; }
   .lp-nav nav > a:not(.btn) { padding: 12px 4px; font-size: 18px; }
+}
+@media (max-width: 899px) {
   .hero { height: 240vh; }
   .hero__stage { height: 100svh; }
   .stats { grid-template-columns: 1fr 1fr; }

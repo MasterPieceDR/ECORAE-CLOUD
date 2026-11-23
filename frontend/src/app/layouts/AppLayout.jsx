@@ -8,7 +8,7 @@ import { useAuth, useCatalogos } from '@/features/auth';
 
 import { api } from '@/shared/api';
 
-import { aplicarTema } from '@/shared/styles/theme';
+import { ThemeSelect } from '@/shared/ui/ThemeSelect';
 
 import { cursor, particles, scrollToTop, ScrollTrigger } from '@/shared/cinema/index.js';
 
@@ -77,8 +77,6 @@ export function AppLayout() {
   const [asistente, setAsistente] = useState(false);
 
   const [menu, setMenu] = useState(false);
-
-  const [tema, setTema] = useState(document.documentElement.dataset.themePreference || 'system');
 
   const [pendientes, setPendientes] = useState(null);
 
@@ -180,7 +178,7 @@ export function AppLayout() {
 
           </form>
 
-          <label className="theme-select"><span className="sr">Tema</span><select aria-label="Tema" value={tema} onChange={(e) => { setTema(e.target.value); aplicarTema(e.target.value); }}><option value="light">Claro</option><option value="dark">Oscuro</option><option value="system">Sistema</option></select></label>
+          <ThemeSelect />
 
           <button className="ask-btn" onClick={() => setAsistente(true)} aria-haspopup="dialog"><Icon name="bot" /><span>Asistente</span></button>
 

@@ -5,6 +5,7 @@ import { useAuth } from './index';
 import { api, photo } from '@/shared/api';
 import { Stepper } from '@/shared/ui/Stepper';
 import { Icon } from '@/shared/ui/Icon';
+import { ThemeSelect } from '@/shared/ui/ThemeSelect';
 import { LogoMark } from '@/shared/ui/Logo';
 import { useCinema } from '@/shared/hooks/useCinema';
 import './auth.css';
@@ -56,6 +57,7 @@ export function LoginPage() {
 
   return (
     <div className="auth" ref={root}>
+      <div className="auth__theme"><ThemeSelect /></div>
       <div className="auth__art">
         <img src={photo('cotopaxi')} alt="El Cotopaxi al atardecer sobre las luces de la ciudad" />
         <Link to="/" aria-label="Volver al inicio" className="auth__logo"><LogoMark size={64} animated /></Link>

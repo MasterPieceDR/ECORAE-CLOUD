@@ -54,7 +54,6 @@
 .side__count { margin-left: auto; padding: 1px 7px; border-radius: 999px; background: var(--surface); color: var(--text); font-size: 12px; }
 .top { background: var(--surface); }
 .top__menu { display: none; }
-.theme-select select { min-height: 40px; max-width: 100px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; }
 .user-menu { position: relative; }
 .user-menu summary { cursor: pointer; list-style: none; }
 .user-menu summary::-webkit-details-marker { display: none; }
@@ -74,6 +73,6 @@
  .tabs__link.active { background: var(--primary); color: var(--on-primary); }
  .ask-btn span { display: none; } .ask-btn { padding: 0 10px; }
 }
-@media (max-width: 480px) { .top { gap: 6px; padding-inline: 8px; } .search { padding-inline: 8px; } .theme-select select { max-width: 75px; font-size: 12px; } }
+@media (max-width: 480px) { .top { gap: 6px; padding-inline: 8px; } .search { padding-inline: 8px; } .top .theme-select select { max-width: 75px; font-size: 12px; } }
 
 @media (max-width: 900px) { .side { visibility: hidden; } .side--open { visibility: visible; } }
