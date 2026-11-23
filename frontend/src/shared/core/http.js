@@ -79,7 +79,7 @@ function put(url, blob, cabeceras = {}, onProgress = () => {}) {
   });
 }
 
-const MIME_IMAGEN = ['image/jpeg', 'image/png'];
+const MIME_IMAGEN = ['image/jpeg', 'image/png', 'image/webp'];
 
 /** Sube una evidencia y la registra en la base. Devuelve su uid. */
 export async function subirEvidencia({ tipo, file, objeto }, onProgress) {
@@ -96,4 +96,12 @@ export async function subirVideo(file, onProgress) {
   const firma = await http.post('/capacitacion/subida', { mime: file.type, tamano: file.size });
   await put(firma.url, file, firma.cabeceras, onProgress);
   return { clave: firma.clave, mime: file.type, tamano: file.size };
+}
+
+export async function subirImagenModelo(uid, file, onProgress) {
+  if (!MIME_IMAGEN.includes(file.type)) throw new ApiError('Selecciona una imagen JPEG, PNG o WEBP.');
+  const blob = await limpiarImagen(file, file.type);
+  const firma = await http.post(`/catalogo/modelos/${uid}/imagen/subida`, { mime: file.type, tamano: blob.size });
+  await put(firma.url, blob, firma.cabeceras, onProgress);
+  return http.put(`/catalogo/modelos/${uid}/imagen`, { clave: firma.clave, sha256: await sha256(blob), mime: file.type, tamano: blob.size });
 }

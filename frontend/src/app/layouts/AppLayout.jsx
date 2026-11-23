@@ -19,6 +19,7 @@ const NAV = [
   { key: 'inicio', label: 'Inicio', icon: 'home', path: '/app' },
   { key: 'tareas', label: 'Mis tareas', corto: 'Tareas', icon: 'inbox', path: '/app/tareas', ver: (can) => OPERATIVOS.some((p) => can(p)) },
   { key: 'objetos', label: 'Equipos y lotes', corto: 'Equipos', icon: 'box', path: '/app/objetos' },
+  { key: 'catalogo', label: 'Catálogo', icon: 'layers', path: '/app/catalogo', ver: (can) => can('CATALOGO.ADMINISTRAR') || can('RED.GESTIONAR') },
   { key: 'documentos', label: 'Documentos', icon: 'file', path: '/app/documentos', ver: (can) => OPERATIVOS.some((p) => can(p)) || can('AUDITORIA.CONSULTAR') },
   { key: 'red', label: 'Red de flujo', corto: 'Red', icon: 'network', path: '/app/red', ver: (can) => can('RED.EJECUTAR_FLUJO') || can('GOBIERNO.DECIDIR') || can('AUDITORIA.CONSULTAR') },
   { key: 'capacitacion', label: 'Capacitación', corto: 'Aprende', icon: 'play', path: '/app/capacitacion' },

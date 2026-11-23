@@ -17,7 +17,7 @@ export function ObjetosPage() {
   const { c } = useCatalogos();
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
-  const filtros = { q: params.get('q') ?? '', estado: params.get('estado') ?? '', clasificacion: params.get('clasificacion') ?? '', tipo: params.get('tipo') ?? '', centro: params.get('centro') ?? '' };
+  const filtros = { q: params.get('q') ?? '', estado: params.get('estado') ?? '', clasificacion: params.get('clasificacion') ?? '', tipo: params.get('tipo') ?? '', centro: params.get('centro') ?? '', serie: params.get('serie') ?? '' };
   const { data, loading, error, reload } = useAsync(() => api.objetos(filtros), [params.toString()]);
   const [sel, setSel] = useState(new Set());
   const [dialogo, setDialogo] = useState(null);
@@ -35,7 +35,8 @@ export function ObjetosPage() {
         {can('OBJETO.REGISTRAR') && <button className="btn btn--primary" onClick={() => setDialogo('registrar')}><Icon name="plus" size={18} /> Registrar equipo</button>}
       </div>
       <div className="filters">
-        <label className="field"><span className="sr">Buscar</span><input type="search" placeholder="Código, categoría, marca, lote u origen" value={filtros.q} onChange={set('q')} /></label>
+        <label className="field"><span className="sr">Buscar</span><input type="search" placeholder="Código, categoría, marca, serie, lote u origen" value={filtros.q} onChange={set('q')} /></label>
+        <label className="field">Serie exacta<input value={filtros.serie} onChange={set('serie')} /></label>
         <label className="field"><span className="sr">Estado</span>
           <select value={filtros.estado} onChange={set('estado')}><option value="">Todos los estados</option>{c.estados.map((s) => <option key={s.codigo} value={s.codigo}>{s.nombre}</option>)}</select>
         </label>
@@ -62,13 +63,14 @@ export function ObjetosPage() {
       {loading && !data ? <Skeleton h={320} /> : objetos.length === 0 ? <p className="empty card">No hay objetos con esos filtros.</p> : (
         <div className="card devices">
           <table>
-            <thead><tr><th><span className="sr">Seleccionar</span></th><th>Código</th><th>Equipo</th><th>Origen</th><th>Ubicación</th><th>Clasificación</th><th>Estado</th><th><span className="sr">Abrir</span></th></tr></thead>
+            <thead><tr><th><span className="sr">Seleccionar</span></th><th>Código</th><th>Equipo</th><th>Serie</th><th>Origen</th><th>Ubicación</th><th>Clasificación</th><th>Estado</th><th><span className="sr">Abrir</span></th></tr></thead>
             <tbody>
               {objetos.map((o) => (
                 <tr key={o.uid} data-sel={sel.has(o.uid)}>
                   <td><input type="checkbox" className="pick" aria-label={`Seleccionar ${o.codigo}`} checked={sel.has(o.uid)} onChange={() => toggle(o.uid)} /></td>
                   <td data-label="Código"><Link to={o.codigo}><b>{o.codigo}</b></Link>{o.tareas?.length > 0 && <span className="pending" title="Tienes una tarea con este objeto">tarea</span>}</td>
                   <td data-label="Equipo">{o.tipo_objeto === 'LOTE' ? `Lote · ${o.miembros_vigentes} equipos` : o.categoria_nombre}<small>{o.marca ?? ''}{o.lote_codigo ? ` · en ${o.lote_codigo}` : ''}</small></td>
+                  <td data-label="Serie">{o.numero_serie ?? '—'}</td>
                   <td data-label="Origen">{o.organizacion_origen_nombre}</td>
                   <td data-label="Ubicación">{o.centro_actual ? `${o.centro_actual}${o.ubicacion_actual && o.ubicacion_actual !== 'RAIZ' ? ` / ${o.ubicacion_actual}` : ''}` : o.transferencia_nodo_destino ? `→ ${o.transferencia_nodo_destino}` : '—'}<small>{desdeHace(o.ultimo_movimiento)}</small></td>
                   <td data-label="Clasificación">{o.tipo_objeto === 'LOTE' ? '—' : <ClasBadge value={o.clasificacion} />}</td>

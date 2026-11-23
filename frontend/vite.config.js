@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 export default defineConfig({
   base: './',
   plugins: [react()],
+  build: { rolldownOptions: { output: { codeSplitting: { groups: [{ name: 'zrender', test: /node_modules[\\/]zrender/ }] } } } },
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   server: { port: 5171, proxy: { '/api': { target: process.env.VITE_PROXY ?? 'http://localhost:8000', changeOrigin: true } } },
   preview: { port: 5171, proxy: { '/api': { target: process.env.VITE_PROXY ?? 'http://localhost:8000', changeOrigin: true } } },

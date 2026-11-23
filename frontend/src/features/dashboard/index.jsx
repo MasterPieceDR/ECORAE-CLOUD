@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { lazy, Suspense, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth, useCatalogos } from '@/features/auth';
 import { api, photo, formatDate, DOCUMENTO } from '@/shared/api';
 import { useAsync } from '@/shared/hooks/useAsync';
@@ -8,11 +9,11 @@ import { Icon } from '@/shared/ui/Icon';
 import { ListaTareas } from '@/features/tareas';
 import { ContenidoCard } from '@/features/capacitacion/ContenidoCard';
 import { soloRolBase } from '@/features/usuarios/Solicitudes';
+const Grafico = lazy(() => import('@/shared/ui/Chart').then((m) => ({ default: m.Chart })));
+const Chart = (props) => <Suspense fallback={<Skeleton h={320} />}><Grafico {...props} /></Suspense>;
 import './dashboard.css';
-
 const R = 62;
 const C = 2 * Math.PI * R;
-
 export function DashboardPage() {
   const { user, can } = useAuth();
   const { c, nombreEstado, nombreRol } = useCatalogos();
@@ -23,7 +24,10 @@ export function DashboardPage() {
   const s = stats.data;
   const root = useCinema(!!s);
   const porEstado = Object.fromEntries((s?.por_estado ?? []).map((x) => [x.estado, x.n]));
-  const max = Math.max(1, ...Object.values(porEstado));
+  const navigate = useNavigate();
+  const estados = c.estados.filter((e) => e.codigo !== 'DESAGRUPADO');
+  const barras = useMemo(() => ({ tooltip: { trigger: 'axis' }, grid: { left: 150, right: 25, top: 10, bottom: 25 }, xAxis: { type: 'value' }, yAxis: { type: 'category', data: estados.map((e) => e.nombre), axisLabel: { color: '#9EB4A7' } }, series: [{ type: 'bar', data: estados.map((e) => ({ value: porEstado[e.codigo] ?? 0, codigo: e.codigo })) }] }), [s, c]);
+  const dona = useMemo(() => ({ tooltip: { trigger: 'item' }, series: [{ type: 'pie', radius: ['45%', '70%'], data: (s?.por_clasificacion ?? []).map((x) => ({ name: c.clasificaciones.find((k) => k.codigo === x.clasificacion)?.nombre ?? x.clasificacion, value: x.n })) }] }), [s, c]);
   const rol = user.roles[0];
   return (
     <div className="dash" ref={root}>
@@ -35,7 +39,6 @@ export function DashboardPage() {
           <p className="dash__sum">{s ? (tareas.data?.total ? `Tienes ${tareas.data.total} tarea(s) pendiente(s). ` : '') + `${s.en_proceso} equipo(s) en proceso en la red.` : 'Preparando tu resumen...'}</p>
         </div>
       </section>
-
       {soloRolBase(user) && (
         <section className="card dash__base" role="status">
           <Icon name="key" size={22} />
@@ -43,7 +46,6 @@ export function DashboardPage() {
           <Link className="btn btn--primary btn--sm" to="/app/perfil#solicitar">Solicitar acceso</Link>
         </section>
       )}
-
       {!s ? <div className="kpis"><Skeleton h={150} /><Skeleton h={150} /><Skeleton h={150} /><Skeleton h={150} /></div> : (
         <section className="kpis" aria-label="Indicadores">
           <article className="kpi" data-tilt="5" data-rise><Icon name="box" size={22} /><b data-count={s.en_proceso}>{s.en_proceso}</b><span>En proceso</span><small>de {s.dispositivos} equipos visibles</small></article>
@@ -62,23 +64,19 @@ export function DashboardPage() {
           )}
         </section>
       )}
-
       {operativo && (
         <section>
           <div className="dash__head"><h2 className="dash__h2"><Icon name="inbox" /> Tus tareas</h2><Link to="/app/tareas" className="dash__all">Ver todas <Icon name="arrow" size={16} /></Link></div>
           {tareas.loading ? <Skeleton h={160} /> : <ListaTareas grupos={tareas.data?.grupos ?? []} compacta />}
         </section>
       )}
-
       {s && (
         <div className="dash__grid">
           <section className="card">
             <h2 className="dash__h2">Equipos por estado</h2>
-            <ul className="bars">
-              {c.estados.filter((e) => e.codigo !== 'DESAGRUPADO').map((e) => (
-                <li key={e.codigo}><span>{e.nombre}</span><div><i data-bar style={{ width: `${((porEstado[e.codigo] ?? 0) / max) * 100}%` }} /></div><b>{porEstado[e.codigo] ?? 0}</b></li>
-              ))}
-            </ul>
+            <Chart label="Equipos por estado; selecciona una barra para filtrar" option={barras} onClick={(p) => p.data?.codigo && navigate(`/app/objetos?estado=${encodeURIComponent(p.data.codigo)}`)} />
+            <div aria-label="Filtrar equipos por estado">{estados.filter((e) => porEstado[e.codigo]).map((e) => <Link key={e.codigo} className="chip-link" to={`/app/objetos?estado=${encodeURIComponent(e.codigo)}`}>{e.nombre} ({porEstado[e.codigo]})</Link>)}</div>
+            <h2 className="dash__h2">Equipos por clasificación</h2><Chart label="Equipos por clasificación" option={dona} />
           </section>
           <div className="dash__col">
             {s.red && (
@@ -107,7 +105,7 @@ export function DashboardPage() {
           </div>
         </div>
       )}
-
+      <Proyeccion />
       {s?.indicadores?.length > 0 && (
         <section className="card">
           <h2 className="dash__h2"><Icon name="leaf" /> Indicadores del periodo</h2>
@@ -123,7 +121,6 @@ export function DashboardPage() {
           </div>
         </section>
       )}
-
       <section>
         <div className="dash__head"><h2 className="dash__h2"><Icon name="play" /> Capacitación</h2><Link to="/app/capacitacion" className="dash__all">Ver todo <Icon name="arrow" size={16} /></Link></div>
         <div className="vgrid">
@@ -132,4 +129,27 @@ export function DashboardPage() {
       </section>
     </div>
   );
+}
+function Proyeccion() {
+  const { c } = useCatalogos();
+  const { can } = useAuth();
+  const permitido = can('RED.GESTIONAR') || can('CATALOGO.ADMINISTRAR') || can('AUDITORIA.CONSULTAR') || can('GOBIERNO.DECIDIR');
+  const [categoria, setCategoria] = useState(''), [semanas, setSemanas] = useState('8'), [medida, setMedida] = useState('equipos');
+  const { data, error, loading } = useAsync(() => permitido ? api.prediccion({ categoria, semanas, medida }) : Promise.resolve(null), [permitido, categoria, semanas, medida]);
+  const option = useMemo(() => {
+    const h = data?.historia ?? [], p = data?.pronostico ?? [], ultimo = h.at(-1)?.valor;
+    return { tooltip: { trigger: 'axis' }, legend: { textStyle: { color: '#9EB4A7' }, data: ['Historia', 'Pronóstico'] }, grid: { left: 55, right: 20, bottom: 45 },
+      xAxis: { type: 'category', data: [...h.map((x) => x.semana), ...p.map((x) => x.semana)] }, yAxis: { type: 'value' },
+      series: [{ name: 'Historia', type: 'line', showSymbol: false, data: [...h.map((x) => x.valor), ...p.map(() => null)] },
+        { name: 'Pronóstico', type: 'line', showSymbol: false, lineStyle: { type: 'dashed' }, data: [...h.slice(0,-1).map(() => null), ultimo, ...p.map((x) => x.valor)] },
+        { name: 'Límite inferior', type: 'line', stack: 'banda', symbol: 'none', lineStyle: { opacity: 0 }, data: [...h.map(() => null), ...p.map((x) => x.inferior)] },
+        { name: 'Banda 80 %', type: 'line', stack: 'banda', symbol: 'none', lineStyle: { opacity: 0 }, areaStyle: { opacity: .18 }, data: [...h.map(() => null), ...p.map((x) => x.superior - x.inferior)] }] };
+  }, [data]);
+  if (!permitido) return null;
+  return <section className="card"><h2 className="dash__h2">Proyección de recolección</h2><div className="filters">
+    <label className="field">Categoría<select value={categoria} onChange={(e) => setCategoria(e.target.value)}><option value="">Todas</option>{c.categorias.filter((x) => !x.padre).map((x) => <option key={x.codigo} value={x.codigo}>{x.nombre}</option>)}</select></label>
+    <label className="field">Horizonte<select value={semanas} onChange={(e) => setSemanas(e.target.value)}>{[4,8,12].map((x) => <option key={x} value={x}>{x} semanas</option>)}</select></label>
+    <label className="field">Medida<select value={medida} onChange={(e) => setMedida(e.target.value)}><option value="equipos">Equipos</option><option value="peso">Kilogramos</option></select></label></div>
+    {loading ? <p>Cargando proyección...</p> : error || !data?.disponible ? <p role="status">{error?.message ?? data?.nota}</p> : <><Chart label="Historia y proyección de recolección con banda de confianza del 80 por ciento" option={option} /><p className="hint">{data.nota} {data.mape == null ? 'No se pudo calcular el error porcentual.' : `El error medio en las últimas cuatro semanas fue ${data.mape} %.`}</p></>}
+  </section>;
 }

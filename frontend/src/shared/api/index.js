@@ -1,5 +1,5 @@
 // Punto único de datos de la app: todas las rutas de la API en un solo lugar.
-import { http, subirEvidencia, subirVideo, token, ApiError, onSesionExpirada } from '../core/http.js';
+import { http, subirEvidencia, subirVideo, subirImagenModelo, token, ApiError, onSesionExpirada } from '../core/http.js';
 
 export const api = {
   // identidad
@@ -10,6 +10,16 @@ export const api = {
   organizacionesPublicas: () => http.get('/auth/organizaciones'),
   // catálogos e indicadores
   catalogos: () => http.get('/catalogos'),
+  modelos: (filtros) => http.get('/catalogo/modelos', filtros),
+  crearModelo: (d) => http.post('/catalogo/modelos', d),
+  actualizarModelo: (uid, d) => http.put(`/catalogo/modelos/${uid}`, d),
+  reabrirModelo: (uid, motivo) => http.post(`/catalogo/modelos/${uid}/reabrir`, { motivo }),
+  imagenModelo: (uid) => http.get(`/catalogo/modelos/${uid}/imagen`),
+  subirImagenModelo,
+  prediccion: (filtros) => http.get('/prediccion/recoleccion', filtros),
+  serieDisponible: (serie, excluir) => http.get('/objetos/serie-disponible', { serie, excluir }),
+  objetoPorSerie: (serie) => http.get(`/objetos/serie/${encodeURIComponent(serie)}`),
+  fotos: (codigo) => http.get(`/objetos/${encodeURIComponent(codigo)}/fotos`),
   tablero: () => http.get('/tablero'),
   recalcularIndicadores: () => http.post('/indicadores/recalcular'),
   // trazabilidad

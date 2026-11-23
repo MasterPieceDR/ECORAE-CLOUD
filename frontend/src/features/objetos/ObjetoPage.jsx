@@ -8,6 +8,7 @@ import { Skeleton } from '@/shared/ui/Skeleton';
 import { Icon } from '@/shared/ui/Icon';
 import { StateBadge, ClasBadge } from '@/shared/ui/StateBadge';
 import { useToast } from '@/shared/ui/Toast';
+import { Modal } from '@/shared/ui/Modal';
 import { AccionDialog } from './AccionDialog';
 import { FilasBD } from '@/features/verificacion';
 import './objetos.css';
@@ -61,6 +62,7 @@ export function ObjetoPage() {
               </ul>
             </section>
           )}
+          {d && <Galeria objeto={o} />}
           <Evidencias lista={evidencias} />
           <section className="card">
             <h2 className="detail__h2">Documentos</h2>
@@ -153,4 +155,18 @@ function Evidencias({ lista }) {
       {lista.length > 0 && <p className="hint">Cada descarga queda registrada con tu propósito; si tu rol no puede abrir ese tipo con ese propósito, la base lo niega (RN-07).</p>}
     </section>
   );
+}
+
+function Galeria({ objeto }) {
+  const { data, error, reload } = useAsync(() => api.fotos(objeto.codigo), [objeto.codigo]);
+  const [vista, setVista] = useState(null), [progreso, setProgreso] = useState(null), [fallo, setFallo] = useState('');
+  const subir = async (e) => { const input = e.target, file = input.files?.[0]; if (!file) return; setFallo(''); setProgreso(0);
+    try { await api.subirEvidencia({ tipo: 'FOTO_EQUIPO', file, objeto: objeto.uid }, setProgreso); reload(); } catch (err) { setFallo(err.message); } finally { setProgreso(null); input.value = ''; } };
+  return <section className="card"><h2 className="detail__h2">Fotos del equipo ({data?.length ?? 0}/5)</h2>
+    {error && <p role="alert" className="error">{error.message}</p>}{fallo && <p role="alert" className="error">{fallo}</p>}
+    <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>{data?.map((f, i) => <button type="button" key={f.uid} className="btn btn--ghost" onClick={() => setVista(f)} aria-label={`Ampliar foto ${i+1}`}><img src={f.url} alt="" style={{width:100,height:80,objectFit:'cover'}} /></button>)}</div>
+    {data && data.length < 5 && <label className="field">Subir fotografía JPEG, PNG o WEBP<input type="file" accept="image/jpeg,image/png,image/webp" onChange={subir} disabled={progreso !== null} /></label>}
+    {progreso !== null && <progress max="100" value={progreso} aria-label="Progreso de subida" />}
+    {vista && <Modal title="Fotografía ampliada" onClose={() => setVista(null)}><img src={vista.url} alt="Fotografía ampliada del equipo" style={{display:'block',maxWidth:'100%',maxHeight:'70vh'}} /></Modal>}
+  </section>;
 }

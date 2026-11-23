@@ -10,6 +10,7 @@ const page = (loader, name) => lazy(() => loader().then((m) => ({ default: m[nam
 const LandingPage = page(() => import('@/features/landing'), 'LandingPage');
 const LoginPage = page(() => import('@/features/auth/LoginPage'), 'LoginPage');
 const DashboardPage = page(() => import('@/features/dashboard'), 'DashboardPage');
+const CatalogoPage = page(() => import('@/features/catalogo'), 'CatalogoPage');
 const TareasPage = page(() => import('@/features/tareas'), 'TareasPage');
 const ObjetosPage = page(() => import('@/features/objetos/ObjetosPage'), 'ObjetosPage');
 const ObjetoPage = page(() => import('@/features/objetos/ObjetoPage'), 'ObjetoPage');
@@ -34,6 +35,7 @@ const router = createHashRouter([
     element: <RequireAuth><AppLayout /></RequireAuth>,
     children: [
       { index: true, element: lazyEl(DashboardPage) },
+      { path: 'catalogo', element: lazyEl(CatalogoPage) },
       { path: 'tareas', element: lazyEl(TareasPage) },
       { path: 'objetos', element: lazyEl(ObjetosPage) },
       { path: 'objetos/:codigo', element: lazyEl(ObjetoPage) },

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { api } from '@/shared/api';
 import { useCatalogos } from '@/features/auth';
+import { ModeloSerie } from './ModeloSerie';
 import { Modal } from '@/shared/ui/Modal';
 import { EvidenciaInput } from '@/shared/ui/EvidenciaInput';
 import { useToast } from '@/shared/ui/Toast';
@@ -305,21 +306,20 @@ function Editar({ objeto, dispositivo: d, ejecutar, children }) {
   const requeridos = categoria?.requeridos ?? [];
   const claves = [...new Set([...requeridos, ...Object.keys(categoria?.propiedades ?? {}), ...Object.keys(d?.atributos ?? {})])];
   const marca = c.marcas.find((m) => m.nombre === d?.marca || m.codigo === d?.marca)?.codigo ?? '';
+  const [almacenamiento, setAlmacenamiento] = useState(!!d?.contiene_almacenamiento);
   return (
     <Formulario onSubmit={(e) => {
       const f = datos(e);
       const atributos = {};
       claves.forEach((k) => { if (f[`a_${k}`] !== '' && f[`a_${k}`] != null) atributos[k] = NUMERICO.test(k) ? Number(f[`a_${k}`]) : f[`a_${k}`]; });
       ejecutar(() => api.actualizarDispositivo(objeto.uid, {
-        peso_kg: Number(f.peso), contiene_almacenamiento: f.almacenamiento === 'on', marca: nulo(f.marca), modelo: nulo(f.modelo?.trim()),
+        peso_kg: Number(f.peso), contiene_almacenamiento: f.almacenamiento === 'on', marca: nulo(f.marca), modelo: nulo(f.modelo?.trim()), modelo_uid: f.modelo_uid && f.modelo_uid !== 'otro' ? f.modelo_uid : null,
         numero_serie: nulo(f.serie?.trim()), anio: f.anio ? Number(f.anio) : null, atributos, motivo: f.motivo,
       }));
     }}>
       <p className="note">{objeto.codigo} · {categoria?.nombre ?? d?.categoria_nombre}. El código y la categoría no se cambian: si están mal, anula el registro y créalo de nuevo.</p>
       <div className="two">
-        <label className="field">Marca<select name="marca" defaultValue={marca}><option value="">Sin marca</option>{c.marcas.map((m) => <option key={m.codigo} value={m.codigo}>{m.nombre}</option>)}</select></label>
-        <label className="field">Modelo<input name="modelo" maxLength={120} defaultValue={d?.modelo ?? ''} /></label>
-        <label className="field">Número de serie<input name="serie" maxLength={80} defaultValue={d?.numero_serie ?? ''} /></label>
+        <ModeloSerie categoria={d?.categoria} inicial={{ ...d, marca }} excluir={objeto.uid} almacenamiento={almacenamiento} onAlmacenamiento={setAlmacenamiento} />
         <label className="field">Año<input name="anio" type="number" min="1970" max="2100" defaultValue={d?.anio_fabricacion ?? ''} /></label>
         <label className="field">Peso (kg) *<input name="peso" type="number" step="0.01" min="0.01" max="2000" required defaultValue={d?.peso_kg ?? ''} /></label>
         {claves.map((k) => (
@@ -328,7 +328,6 @@ function Editar({ objeto, dispositivo: d, ejecutar, children }) {
           </label>
         ))}
       </div>
-      <label className="check"><input type="checkbox" name="almacenamiento" defaultChecked={!!d?.contiene_almacenamiento} /> Tiene disco o memoria con datos (activa RN-09)</label>
       <label className="field">¿Qué corriges? *<input name="motivo" required minLength={5} maxLength={300} placeholder="Ej.: peso mal digitado en el registro" /></label>
       {children}
     </Formulario>

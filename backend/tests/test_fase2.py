@@ -214,3 +214,27 @@ async def test_fase2_objetos_modelo_serie_y_fotos(actores):
             assert cur.fetchone()[0] == 5
     assert (await otro.get(f"/objetos/{codigo}/fotos")).status_code == 404
     assert (await gen.post("/evidencias/subida", {"tipo": "FOTO_EQUIPO", "mime": "image/png", "tamano": 10 * 1024 * 1024 + 1})).status_code == 422
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_prediccion_endpoint(actores):
+    for alias in ("coordinador", "admin", "auditor", "comite"):
+        r = await actores[alias].get("/prediccion/recoleccion", params={"semanas": 4, "medida": "peso"})
+        assert r.status_code == 200, r.text
+        datos = r.json()
+        assert datos["disponible"], datos
+        assert len(datos["historia"]) >= 52 and len(datos["pronostico"]) == 4
+        assert datos["pronostico"][0]["inferior"] <= datos["pronostico"][0]["valor"] <= datos["pronostico"][0]["superior"]
+    r = await actores["gen.universidad"].get("/prediccion/recoleccion")
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_prediccion_fallo_aislado(actores, monkeypatch):
+    from app.rutas import prediccion
+    def fallar(*args, **kwargs):
+        raise RuntimeError("fallo simulado")
+    monkeypatch.setattr(prediccion, "holt", fallar)
+    r = await actores["coordinador"].get("/prediccion/recoleccion")
+    assert r.status_code == 200 and not r.json()["disponible"]
+    assert (await actores["coordinador"].get("/tablero")).status_code == 200
