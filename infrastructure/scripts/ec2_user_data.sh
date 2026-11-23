@@ -12,8 +12,10 @@ cd /opt/ecoraee
 curl --fail --silent --show-error https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -o /opt/ecoraee/rds-ca.pem
 docker build -f backend/Dockerfile -t ecoraee-api .
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/ecoraee/infrastructure/scripts/cloudwatch-agent.json
+IMDS_TOKEN=$(curl --fail --silent --show-error -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" http://169.254.169.254/latest/api/token)
+INSTANCE_ID=$(curl --fail --silent --show-error -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
 docker run -d --restart unless-stopped --name ecoraee-api -p 8000:8000 \
-  --log-driver awslogs --log-opt "awslogs-region=$AWS_REGION" --log-opt "awslogs-group=$GRUPO_LOGS" --log-opt "awslogs-stream=api-$(hostname)" \
+  --log-driver awslogs --log-opt "awslogs-region=$AWS_REGION" --log-opt "awslogs-group=$GRUPO_LOGS" --log-opt "awslogs-stream=api-$INSTANCE_ID" \
   -v /opt/ecoraee/rds-ca.pem:/etc/ssl/rds-ca.pem:ro -e SSL_CERT_FILE=/etc/ssl/rds-ca.pem \
   -e ENTORNO=produccion -e DEMO=false -e DB_SSL=true -e AUTH_MODO=local \
   -e DB_SECRET_ARN -e JWT_SECRET_ARN -e AWS_REGION -e ALMACEN_MODO=s3 \

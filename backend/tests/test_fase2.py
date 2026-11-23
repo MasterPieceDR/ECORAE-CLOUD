@@ -238,3 +238,51 @@ async def test_prediccion_fallo_aislado(actores, monkeypatch):
     r = await actores["coordinador"].get("/prediccion/recoleccion")
     assert r.status_code == 200 and not r.json()["disponible"]
     assert (await actores["coordinador"].get("/tablero")).status_code == 200
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_prediccion_rellena_semanas_sin_datos(actores):
+    import os
+    import psycopg2
+    from datetime import timedelta
+
+    with psycopg2.connect(dbname=os.getenv("DB_NOMBRE", "ecoraee"), host=os.getenv("PGHOST", "localhost"),
+                          user=os.getenv("PGUSER", "ecoraee_admin"), password=os.getenv("PGPASSWORD")) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, codigo FROM cat.categoria_raee WHERE categoria_padre_id IS NULL ORDER BY id LIMIT 1")
+            categoria_id, codigo = cur.fetchone()
+            cur.execute("SELECT max(semana) FROM api.v1_serie_recoleccion WHERE categoria=%s", (codigo,))
+            ultima = cur.fetchone()[0]
+            primera, hueco, tercera = (ultima + timedelta(weeks=i) for i in (2, 3, 4))
+            cur.executemany("INSERT INTO ind.historial_recoleccion_semanal (semana, categoria_id, equipos, peso_kg) VALUES (%s, %s, %s, %s)",
+                            [(primera, categoria_id, 7, 14), (tercera, categoria_id, 9, 18)])
+        conn.commit()
+        try:
+            r = await actores["coordinador"].get("/prediccion/recoleccion", params={"categoria": codigo})
+            assert r.status_code == 200 and r.json()["disponible"]
+            historia = {x["semana"]: x for x in r.json()["historia"]}
+            assert historia[primera.isoformat()]["valor"] == 7
+            assert historia[hueco.isoformat()] == {"semana": hueco.isoformat(), "valor": 0, "sintetico": False}
+            assert historia[tercera.isoformat()]["valor"] == 9
+        finally:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM ind.historial_recoleccion_semanal WHERE categoria_id=%s AND semana IN (%s, %s)", (categoria_id, primera, tercera))
+            conn.commit()
+
+
+def test_serie_prefiere_recepciones_reales(base_de_datos):
+    import os
+    import psycopg2
+
+    with psycopg2.connect(dbname=os.getenv("DB_NOMBRE", "ecoraee"), host=os.getenv("PGHOST", "localhost"),
+                          user=os.getenv("PGUSER", "ecoraee_admin"), password=os.getenv("PGPASSWORD")) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT semana, categoria, equipos, peso_kg FROM api.v1_serie_recoleccion WHERE NOT sintetico LIMIT 1")
+            semana, categoria, equipos, peso = cur.fetchone()
+            cur.execute("SELECT id FROM cat.categoria_raee WHERE codigo=%s", (categoria,))
+            categoria_id = cur.fetchone()[0]
+            cur.execute("""INSERT INTO ind.historial_recoleccion_semanal (semana, categoria_id, equipos, peso_kg, sintetico)
+                           VALUES (%s, %s, 999999, 999999, true)
+                           ON CONFLICT (semana, categoria_id) DO UPDATE SET equipos=999999, peso_kg=999999, sintetico=true""", (semana, categoria_id))
+            cur.execute("SELECT equipos, peso_kg, sintetico FROM api.v1_serie_recoleccion WHERE semana=%s AND categoria=%s", (semana, categoria))
+            assert cur.fetchall() == [(equipos, peso, False)]
+        conn.rollback()

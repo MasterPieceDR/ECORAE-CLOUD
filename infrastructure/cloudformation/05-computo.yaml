@@ -50,6 +50,13 @@
       "AllowedValues": [
         "local"
       ]
+    },
+    "OriginVerifySecret": {
+      "Type": "String",
+      "NoEcho": true,
+      "MinLength": 16,
+      "MaxLength": 128,
+      "AllowedPattern": "[a-zA-Z0-9]+"
     }
   },
   "Resources": {
@@ -141,9 +148,11 @@
         "Protocol": "HTTP",
         "DefaultActions": [
           {
-            "Type": "forward",
-            "TargetGroupArn": {
-              "Ref": "Target"
+            "Type": "fixed-response",
+            "FixedResponseConfig": {
+              "StatusCode": "403",
+              "ContentType": "text/plain",
+              "MessageBody": "Forbidden"
             }
           }
         ]
@@ -191,7 +200,7 @@
           ],
           "UserData": {
             "Fn::Base64": {
-              "Fn::Sub": "#!/bin/bash\nset -euxo pipefail\ndnf install -y docker amazon-cloudwatch-agent awscli unzip\nsystemctl enable --now docker\nmkdir -p /opt/ecoraee\naws s3 cp s3://${BucketArtefactos}/${ClaveArtefacto} /tmp/ecoraee.zip --region ${AWS::Region}\nunzip -q /tmp/ecoraee.zip -d /opt/ecoraee\ncd /opt/ecoraee\ncurl --fail --silent --show-error https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -o /opt/ecoraee/rds-ca.pem\ndocker build -f backend/Dockerfile -t ecoraee-api .\ncat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<'EOF'\n{\"agent\":{\"metrics_collection_interval\":60},\"metrics\":{\"namespace\":\"EcoRAEE\",\"append_dimensions\":{\"InstanceId\":\"${!aws:InstanceId}\"},\"metrics_collected\":{\"mem\":{\"measurement\":[\"mem_used_percent\"]},\"disk\":{\"measurement\":[\"used_percent\"],\"resources\":[\"/\"]}}}}\nEOF\n/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json\ndocker run -d --restart unless-stopped --name ecoraee-api -p 8000:8000 --log-driver awslogs --log-opt awslogs-region=${AWS::Region} --log-opt awslogs-group=${GrupoLogs} --log-opt awslogs-stream=api-$(curl -s http://169.254.169.254/latest/meta-data/instance-id || hostname) -v /opt/ecoraee/rds-ca.pem:/etc/ssl/rds-ca.pem:ro -e SSL_CERT_FILE=/etc/ssl/rds-ca.pem -e ENTORNO=produccion -e DEMO=false -e DB_SSL=true -e AUTH_MODO=${AuthModo} -e DB_SECRET_ARN=${SecretoServiciosArn} -e JWT_SECRET_ARN=${SecretoJwtArn} -e AWS_REGION=${AWS::Region} -e ALMACEN_MODO=s3 -e BUCKET_EVIDENCIAS=${BucketEvidencias} -e BUCKET_CONTENIDOS=${BucketContenidos} -e CORS_ORIGENES=${OrigenWeb} ecoraee-api uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*' --no-access-log\n"
+              "Fn::Sub": "#!/bin/bash\nset -euxo pipefail\ndnf install -y docker amazon-cloudwatch-agent awscli unzip\nsystemctl enable --now docker\nmkdir -p /opt/ecoraee\naws s3 cp s3://${BucketArtefactos}/${ClaveArtefacto} /tmp/ecoraee.zip --region ${AWS::Region}\nunzip -q /tmp/ecoraee.zip -d /opt/ecoraee\ncd /opt/ecoraee\ncurl --fail --silent --show-error https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -o /opt/ecoraee/rds-ca.pem\ndocker build -f backend/Dockerfile -t ecoraee-api .\ncat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<'EOF'\n{\"agent\":{\"metrics_collection_interval\":60},\"metrics\":{\"namespace\":\"EcoRAEE\",\"append_dimensions\":{\"InstanceId\":\"${!aws:InstanceId}\"},\"metrics_collected\":{\"mem\":{\"measurement\":[\"mem_used_percent\"]},\"disk\":{\"measurement\":[\"used_percent\"],\"resources\":[\"/\"]}}}}\nEOF\n/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json\nIMDS_TOKEN=$(curl --fail --silent --show-error -X PUT -H \"X-aws-ec2-metadata-token-ttl-seconds: 21600\" http://169.254.169.254/latest/api/token)\nINSTANCE_ID=$(curl --fail --silent --show-error -H \"X-aws-ec2-metadata-token: $IMDS_TOKEN\" http://169.254.169.254/latest/meta-data/instance-id)\ndocker run -d --restart unless-stopped --name ecoraee-api -p 8000:8000 --log-driver awslogs --log-opt awslogs-region=${AWS::Region} --log-opt awslogs-group=${GrupoLogs} --log-opt awslogs-stream=api-$INSTANCE_ID -v /opt/ecoraee/rds-ca.pem:/etc/ssl/rds-ca.pem:ro -e SSL_CERT_FILE=/etc/ssl/rds-ca.pem -e ENTORNO=produccion -e DEMO=false -e DB_SSL=true -e AUTH_MODO=${AuthModo} -e DB_SECRET_ARN=${SecretoServiciosArn} -e JWT_SECRET_ARN=${SecretoJwtArn} -e AWS_REGION=${AWS::Region} -e ALMACEN_MODO=s3 -e BUCKET_EVIDENCIAS=${BucketEvidencias} -e BUCKET_CONTENIDOS=${BucketContenidos} -e CORS_ORIGENES=${OrigenWeb} ecoraee-api uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*' --no-access-log\n"
             }
           },
           "TagSpecifications": [
@@ -248,7 +257,8 @@
       "Type": "AWS::AutoScaling::AutoScalingGroup",
       "DependsOn": [
         "Listener",
-        "Logs"
+        "Logs",
+        "OriginVerifyRule"
       ],
       "Properties": {
         "VPCZoneIdentifier": [
@@ -329,6 +339,36 @@
             "Key": "Responsable",
             "Value": {
               "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "OriginVerifyRule": {
+      "Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
+      "Properties": {
+        "ListenerArn": {
+          "Ref": "Listener"
+        },
+        "Priority": 1,
+        "Conditions": [
+          {
+            "Field": "http-header",
+            "HttpHeaderConfig": {
+              "HttpHeaderName": "X-Origin-Verify",
+              "Values": [
+                {
+                  "Ref": "OriginVerifySecret"
+                }
+              ]
+            }
+          }
+        ],
+        "Actions": [
+          {
+            "Type": "forward",
+            "TargetGroupArn": {
+              "Ref": "Target"
             }
           }
         ]

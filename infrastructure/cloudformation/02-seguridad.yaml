@@ -42,6 +42,11 @@
     },
     "SecretoJwtArn": {
       "Type": "String"
+    },
+    "CloudFrontPrefixListId": {
+      "Type": "String",
+      "Default": "pl-3b927c52",
+      "Description": "ID regional: aws ec2 describe-managed-prefix-lists --filters Name=prefix-list-name,Values=com.amazonaws.global.cloudfront.origin-facing"
     }
   },
   "Resources": {
@@ -141,7 +146,9 @@
         "IpProtocol": "tcp",
         "FromPort": 80,
         "ToPort": 80,
-        "CidrIp": "0.0.0.0/0"
+        "SourcePrefixListId": {
+          "Ref": "CloudFrontPrefixListId"
+        }
       }
     },
     "AppIngress": {

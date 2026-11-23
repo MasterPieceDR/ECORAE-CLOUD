@@ -15,6 +15,13 @@
     },
     "BucketFrontend": {
       "Type": "String"
+    },
+    "OriginVerifySecret": {
+      "Type": "String",
+      "NoEcho": true,
+      "MinLength": 16,
+      "MaxLength": 128,
+      "AllowedPattern": "[a-zA-Z0-9]+"
     }
   },
   "Resources": {
@@ -78,7 +85,15 @@
               "CustomOriginConfig": {
                 "OriginProtocolPolicy": "http-only",
                 "HTTPPort": 80
-              }
+              },
+              "OriginCustomHeaders": [
+                {
+                  "HeaderName": "X-Origin-Verify",
+                  "HeaderValue": {
+                    "Ref": "OriginVerifySecret"
+                  }
+                }
+              ]
             }
           ],
           "DefaultCacheBehavior": {

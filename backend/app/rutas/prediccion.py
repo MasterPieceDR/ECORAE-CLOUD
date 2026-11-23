@@ -18,9 +18,14 @@ async def recoleccion(categoria: str | None = None, semanas: int = Query(8, ge=1
             raise ErrorAPI(403, "No tienes permiso para consultar la proyección", "EC403")
     try:
         async with s.tx() as conn:
-            filas = await conn.fetch("""SELECT semana, sum(equipos) equipos, sum(peso_kg) peso,
-                bool_or(sintetico) sintetico FROM api.v1_serie_recoleccion
-                WHERE ($1::text IS NULL OR categoria=$1) GROUP BY semana ORDER BY semana""", categoria)
+            filas = await conn.fetch("""WITH datos AS (
+                SELECT semana, sum(equipos) equipos, sum(peso_kg) peso, bool_or(sintetico) sintetico
+                FROM api.v1_serie_recoleccion WHERE ($1::text IS NULL OR categoria=$1) GROUP BY semana
+            ), limites AS (SELECT min(semana) inicio, max(semana) fin FROM datos)
+            SELECT serie.semana::date AS semana, coalesce(datos.equipos, 0) equipos,
+                   coalesce(datos.peso, 0) peso, coalesce(datos.sintetico, false) sintetico
+            FROM limites CROSS JOIN LATERAL generate_series(inicio::timestamp, fin::timestamp, interval '1 week') serie(semana)
+            LEFT JOIN datos ON datos.semana=serie.semana::date ORDER BY serie.semana""", categoria)
         historia = [{"semana": f["semana"].isoformat(), "valor": float(f[medida]), "sintetico": f["sintetico"]} for f in filas]
         resultado = holt([x["valor"] for x in historia], semanas)
         for i, punto in enumerate(resultado["pronostico"], 1):

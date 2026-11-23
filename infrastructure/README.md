@@ -16,6 +16,9 @@ ART=REEMPLAZAR-artefactos-existente
 KEY=ecoraee/codigo.zip
 EMAIL=REEMPLAZAR@example.org
 LOGS=/ecoraee/lab/api
+# Genere un secreto alfanumérico de 16–128 caracteres y manténgalo fuera del repositorio.
+read -rs -p "Secreto del origen: " ORIGIN_SECRET; echo
+CF_PREFIX=$(aws ec2 describe-managed-prefix-lists --filters Name=prefix-list-name,Values=com.amazonaws.global.cloudfront.origin-facing --query "PrefixLists[0].PrefixListId" --output text)
 AMI=ami-REEMPLAZAR # Amazon Linux 2023 x86_64 de la región
 ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 PART=aws # ajustar en particiones distintas
@@ -27,7 +30,7 @@ zip -qr /tmp/ecoraee-codigo.zip backend/app backend/mcp_server backend/Dockerfil
 aws s3 cp /tmp/ecoraee-codigo.zip "s3://$ART/$KEY"
 rm /tmp/ecoraee-codigo.zip
 aws cloudformation deploy --stack-name "$P-red" --template-file infrastructure/cloudformation/01-red.yaml --parameter-overrides $BASE CrearNAT=true CrearEndpoints=false
-aws cloudformation deploy --stack-name "$P-seguridad" --template-file infrastructure/cloudformation/02-seguridad.yaml --capabilities CAPABILITY_IAM --parameter-overrides $BASE UsarLabRole=false BucketEvidencias="$EVID" BucketContenidos="$CONT" BucketArtefactos="$ART" ClaveArtefacto="$KEY" SecretoServiciosArn="$SVC" SecretoJwtArn="$JWT"
+aws cloudformation deploy --stack-name "$P-seguridad" --template-file infrastructure/cloudformation/02-seguridad.yaml --capabilities CAPABILITY_IAM --parameter-overrides $BASE UsarLabRole=false CloudFrontPrefixListId="$CF_PREFIX" BucketEvidencias="$EVID" BucketContenidos="$CONT" BucketArtefactos="$ART" ClaveArtefacto="$KEY" SecretoServiciosArn="$SVC" SecretoJwtArn="$JWT"
 aws cloudformation deploy --stack-name "$P-datos" --template-file infrastructure/cloudformation/03-datos.yaml --parameter-overrides $BASE MultiAZ=false
 # Origen temporal válido; se reemplaza cuando se crea la distribución.
 ORIGEN=https://example.invalid
@@ -35,17 +38,19 @@ aws cloudformation deploy --stack-name "$P-almacenamiento" --template-file infra
 export DB_SECRET_ARN=$(aws cloudformation describe-stacks --stack-name "$P-datos" --query "Stacks[0].Outputs[?OutputKey=='ServiceSecret'].OutputValue" --output text)
 export JWT_SECRET_ARN=$(aws cloudformation describe-stacks --stack-name "$P-datos" --query "Stacks[0].Outputs[?OutputKey=='JwtSecret'].OutputValue" --output text)
 export MASTER_SECRET_ARN=$(aws cloudformation describe-stacks --stack-name "$P-datos" --query "Stacks[0].Outputs[?OutputKey=='MasterSecret'].OutputValue" --output text)
-aws cloudformation deploy --stack-name "$P-computo" --template-file infrastructure/cloudformation/05-computo.yaml --parameter-overrides $BASE AmiId="$AMI" BucketArtefactos="$ART" ClaveArtefacto="$KEY" SecretoServiciosArn="$DB_SECRET_ARN" SecretoJwtArn="$JWT_SECRET_ARN" BucketEvidencias="$EVID" BucketContenidos="$CONT" OrigenWeb="$ORIGEN" GrupoLogs="$LOGS"
-aws cloudformation deploy --stack-name "$P-cdn" --template-file infrastructure/cloudformation/06-cdn.yaml --parameter-overrides $BASE BucketFrontend="$FRONT"
+aws cloudformation deploy --stack-name "$P-computo" --template-file infrastructure/cloudformation/05-computo.yaml --parameter-overrides $BASE OriginVerifySecret="$ORIGIN_SECRET" AmiId="$AMI" BucketArtefactos="$ART" ClaveArtefacto="$KEY" SecretoServiciosArn="$DB_SECRET_ARN" SecretoJwtArn="$JWT_SECRET_ARN" BucketEvidencias="$EVID" BucketContenidos="$CONT" OrigenWeb="$ORIGEN" GrupoLogs="$LOGS"
+aws cloudformation deploy --stack-name "$P-cdn" --template-file infrastructure/cloudformation/06-cdn.yaml --parameter-overrides $BASE BucketFrontend="$FRONT" OriginVerifySecret="$ORIGIN_SECRET"
 DOMAIN=$(aws cloudformation describe-stacks --stack-name "$P-cdn" --query "Stacks[0].Outputs[?OutputKey=='Domain'].OutputValue" --output text)
 export DISTRIBUCION_ID=$(aws cloudformation describe-stacks --stack-name "$P-cdn" --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" --output text)
 ORIGEN="https://$DOMAIN"
 aws cloudformation deploy --stack-name "$P-almacenamiento" --template-file infrastructure/cloudformation/04-almacenamiento.yaml --parameter-overrides $BASE BucketFrontend="$FRONT" BucketEvidencias="$EVID" BucketContenidos="$CONT" OrigenWeb="$ORIGEN"
-aws cloudformation deploy --stack-name "$P-computo" --template-file infrastructure/cloudformation/05-computo.yaml --parameter-overrides $BASE AmiId="$AMI" BucketArtefactos="$ART" ClaveArtefacto="$KEY" SecretoServiciosArn="$DB_SECRET_ARN" SecretoJwtArn="$JWT_SECRET_ARN" BucketEvidencias="$EVID" BucketContenidos="$CONT" OrigenWeb="$ORIGEN" GrupoLogs="$LOGS"
+aws cloudformation deploy --stack-name "$P-computo" --template-file infrastructure/cloudformation/05-computo.yaml --parameter-overrides $BASE OriginVerifySecret="$ORIGIN_SECRET" AmiId="$AMI" BucketArtefactos="$ART" ClaveArtefacto="$KEY" SecretoServiciosArn="$DB_SECRET_ARN" SecretoJwtArn="$JWT_SECRET_ARN" BucketEvidencias="$EVID" BucketContenidos="$CONT" OrigenWeb="$ORIGEN" GrupoLogs="$LOGS"
 aws cloudformation deploy --stack-name "$P-observabilidad" --template-file infrastructure/cloudformation/07-observabilidad.yaml --parameter-overrides $BASE BucketAuditoria="$AUDIT" CorreoAlerta="$EMAIL" PresupuestoUSD=100
 export BUCKET_FRONTEND="$FRONT"
 bash infrastructure/scripts/publicar_frontend.sh
 ```
+
+El parámetro `CloudFrontPrefixListId` identifica la lista administrada de CloudFront en la región (por defecto `pl-3b927c52` en us-east-1); consúltela con el comando del ejemplo. `OriginVerifySecret` es un parámetro NoEcho compartido por los stacks de cómputo y CDN: proporcione el mismo valor alfanumérico secreto a ambos y protéjalo durante su gestión y rotación.
 
 Para usar Compose manualmente, copie `.env.aws.example` a `.env.aws` y ejecute `docker compose --env-file .env.aws -f docker-compose.aws.yml up -d`; proporcione la CA de RDS confiable a la imagen y configure una secuencia de logs única por instancia. El stack utiliza el Launch Template, no Compose.
 

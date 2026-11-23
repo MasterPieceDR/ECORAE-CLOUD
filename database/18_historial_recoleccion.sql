@@ -19,15 +19,20 @@ FROM cat.categoria_raee c CROSS JOIN generate_series(1,52) n WHERE c.categoria_p
 ON CONFLICT (semana, categoria_id) DO NOTHING;
 GRANT SELECT ON ind.historial_recoleccion_semanal TO ecoraee_lectura;
 CREATE OR REPLACE VIEW api.v1_serie_recoleccion WITH (security_invoker=true) AS
+WITH reales AS (
+ SELECT date_trunc('week', he.ocurrido_en AT TIME ZONE 'America/Guayaquil')::date AS semana,
+        raiz.id AS categoria_id, raiz.codigo AS categoria, raiz.nombre AS categoria_nombre,
+        count(*)::integer AS equipos, sum(d.peso_kg)::numeric AS peso_kg
+ FROM trz.historial_estado he JOIN cat.estado_trazabilidad e ON e.id=he.estado_destino_id
+ JOIN trz.dispositivo d ON d.objeto_id=he.objeto_id JOIN cat.categoria_raee c ON c.id=d.categoria_id
+ JOIN cat.categoria_raee raiz ON raiz.ruta @> c.ruta AND raiz.categoria_padre_id IS NULL
+ WHERE e.codigo='RECIBIDO' AND (he.estado_origen_id IS NULL OR he.estado_origen_id IN
+  (SELECT id FROM cat.estado_trazabilidad WHERE codigo IN ('REGISTRADO','EN_RECOLECCION')))
+ GROUP BY 1, raiz.id, raiz.codigo, raiz.nombre
+)
 SELECT h.semana, c.codigo AS categoria, c.nombre AS categoria_nombre, h.equipos, h.peso_kg, h.sintetico
 FROM ind.historial_recoleccion_semanal h JOIN cat.categoria_raee c ON c.id=h.categoria_id
+WHERE NOT EXISTS (SELECT 1 FROM reales r WHERE r.semana=h.semana AND r.categoria_id=h.categoria_id)
 UNION ALL
-SELECT date_trunc('week', he.ocurrido_en AT TIME ZONE 'America/Guayaquil')::date, raiz.codigo, raiz.nombre,
-       count(*)::integer, sum(d.peso_kg)::numeric, false
-FROM trz.historial_estado he JOIN cat.estado_trazabilidad e ON e.id=he.estado_destino_id
-JOIN trz.dispositivo d ON d.objeto_id=he.objeto_id JOIN cat.categoria_raee c ON c.id=d.categoria_id
-JOIN cat.categoria_raee raiz ON raiz.ruta @> c.ruta AND raiz.categoria_padre_id IS NULL
-WHERE e.codigo='RECIBIDO' AND (he.estado_origen_id IS NULL OR he.estado_origen_id IN
- (SELECT id FROM cat.estado_trazabilidad WHERE codigo IN ('REGISTRADO','EN_RECOLECCION')))
-GROUP BY 1, raiz.codigo, raiz.nombre;
+SELECT semana, categoria, categoria_nombre, equipos, peso_kg, false FROM reales;
 GRANT SELECT ON api.v1_serie_recoleccion TO ecoraee_lectura;

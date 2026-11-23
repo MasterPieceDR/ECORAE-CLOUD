@@ -17,7 +17,7 @@ indica el criterio de aceptación, dónde está la evidencia y el estado.
 
 | Caso | Prueba (10.1) | Criterio de aceptación | Evidencia | Estado |
 |---|---|---|---|---|
-| CP-01 | Acceso por rol | Permite o deniega según la matriz | `backend/tests/test_api.py` (casos de rol y RLS) · `evidence/CP-01/` (capturas en AWS) | Desarrollo (2026-11-23, API 26/26 en local) |
+| CP-01 | Acceso por rol | Permite o deniega según la matriz | `backend/tests/test_api.py` (casos de rol y RLS) · `evidence/CP-01/` (capturas en AWS) | Desarrollo (2026-11-23, API 33/33 en local) |
 | CP-02 | Registro y lote | Persiste sin duplicados | `database/06_pruebas.sql` · `backend/tests/test_fase2.py` (serie duplicada → 409) | Desarrollo (2026-11-23, base 84/84) |
 | CP-03 | Transición de estado | Solo transiciones permitidas | `database/06_pruebas.sql` · `backend/tests/test_api.py` | Desarrollo (2026-11-23) |
 | CP-04 | Integridad referencial | Protege relaciones o aplica la política definida | `database/06_pruebas.sql` · `docs/resultados_pruebas.csv` | Desarrollo |
@@ -50,3 +50,7 @@ docker compose -f docker-compose.pruebas.yml down -v
 | D-03 | CORS no permitía `DELETE` (anular equipos fallaba entre orígenes) | `allow_methods` con `DELETE` y `OPTIONS` | Revisión de código |
 | D-04 | En modo S3 la verificación descargaba archivos de hasta 500 MB en la EC2 | Solo se descargan imágenes; el resto se verifica con `head_object` | `test_fase2.py::test_almacen_s3_verifica_contenido` |
 | D-05 | El diagrama AWS de la Parte II tenía todo en una AZ y la EC2 sin salida | Rediseño en 2 AZ con NAT (ver `docs/aws/GUIA_DESPLIEGUE.md`) | CP-12 |
+| D-06 | La proyección saltaba las semanas sin datos (distorsionaba la tendencia) | Serie semanal continua rellenada con 0 | `test_fase2.py` (huecos) |
+| D-07 | Las semanas con datos reales y sintéticos se sumaban dos veces | El dato real tiene prioridad sobre el sintético | `test_fase2.py` (precedencia) |
+| D-08 | El ALB aceptaba tráfico de cualquier IP y permitía saltarse CloudFront | Prefix list de CloudFront + cabecera secreta `X-Origin-Verify`; el resto recibe 403 | `cfn-lint` · CP-10 |
+| D-09 | El user-data leía metadatos sin token, incompatible con IMDSv2 obligatorio | Token IMDSv2 antes de leer `instance-id` | `cfn-lint` · CP-12 |
