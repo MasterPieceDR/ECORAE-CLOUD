@@ -1,0 +1,170 @@
+erDiagram
+  seg__actor_rol_mapeo {
+    smallint actor_negocio_id PK
+    smallint rol_id PK
+    text observacion
+  }
+  seg__ecosistema {
+    bigint id PK
+    uuid uid
+    cat.d_codigo codigo
+    character_varying nombre
+    character_varying tipo
+    character_varying zona_horaria
+    boolean activo
+    timestamp_with_time_zone creado_en
+  }
+  seg__habilitacion_tecnica {
+    bigint id PK
+    bigint usuario_id FK
+    smallint categoria_id FK
+    daterange vigencia
+    bigint emitida_por FK
+    text evidencia_ref
+  }
+  seg__permiso {
+    smallint id PK
+    cat.d_codigo codigo
+    character_varying recurso
+    character_varying accion
+    text descripcion
+  }
+  seg__rol {
+    smallint id PK
+    cat.d_codigo codigo
+    character_varying nombre
+    text descripcion
+    smallint rol_padre_id FK
+    boolean es_servicio
+    boolean activo
+  }
+  seg__rol_permiso {
+    smallint rol_id PK
+    smallint permiso_id PK
+  }
+  seg__segregacion_funciones {
+    smallint rol_a_id PK
+    smallint rol_b_id PK
+    text motivo
+  }
+  seg__usuario {
+    bigint id PK
+    uuid uid
+    bigint ecosistema_id FK
+    bigint organizacion_id FK
+    character_varying alias
+    character_varying correo
+    character_varying proveedor_identidad
+    character_varying sub_externo
+    text hash_credencial
+    boolean mfa_habilitado
+    character_varying estado
+    timestamp_with_time_zone ultimo_acceso_en
+    timestamp_with_time_zone creado_en
+    bigint creado_por
+    timestamp_with_time_zone actualizado_en
+    bigint actualizado_por
+    integer version
+    timestamp_with_time_zone eliminado_en
+  }
+  seg__usuario_rol {
+    bigint id PK
+    bigint usuario_id FK
+    smallint rol_id FK
+    bigint organizacion_id FK
+    bigint centro_id FK
+    tstzrange vigencia
+    bigint otorgado_por FK
+    text motivo
+  }
+  org__capacidad_centro {
+    bigint id PK
+    bigint centro_id FK
+    smallint tipo_centro_id FK
+    cat.d_cantidad capacidad_almacen
+    cat.d_cantidad capacidad_proceso
+    smallint unidad_id FK
+    character_varying periodo
+    tstzrange vigencia
+  }
+  org__centro {
+    bigint id PK
+    uuid uid
+    bigint organizacion_id FK
+    cat.d_codigo codigo
+    character_varying nombre
+    character_varying canton
+    character_varying parroquia
+    jsonb horario
+    character_varying estado
+    timestamp_with_time_zone creado_en
+    bigint creado_por
+    timestamp_with_time_zone actualizado_en
+    bigint actualizado_por
+    integer version
+    timestamp_with_time_zone eliminado_en
+  }
+  org__centro_funcion {
+    bigint centro_id PK
+    smallint tipo_centro_id PK
+  }
+  org__organizacion {
+    bigint id PK
+    uuid uid
+    bigint ecosistema_id FK
+    cat.d_codigo codigo
+    character_varying nombre
+    character_varying tipo_persona
+    character_varying sector
+    bigint organizacion_padre_id FK
+    character_varying canton
+    character_varying parroquia
+    character_varying estado
+    timestamp_with_time_zone creado_en
+    bigint creado_por
+    timestamp_with_time_zone actualizado_en
+    bigint actualizado_por
+    integer version
+    timestamp_with_time_zone eliminado_en
+  }
+  org__organizacion_actor {
+    bigint id PK
+    bigint organizacion_id FK
+    smallint tipo_actor_id FK
+    daterange vigencia
+  }
+  org__ubicacion {
+    bigint id PK
+    bigint centro_id FK
+    bigint ubicacion_padre_id FK
+    cat.d_codigo codigo
+    character_varying nombre
+    character_varying tipo
+    cat.d_peso capacidad_kg
+    ltree ruta
+    smallint nivel
+    boolean activo
+  }
+  seg__ecosistema ||--o{ org__organizacion : "ecosistema_id"
+  org__centro_funcion ||--o{ org__capacidad_centro : "centro_id"
+  seg__usuario |o--o{ seg__habilitacion_tecnica : "emitida_por"
+  org__centro |o--o{ seg__usuario_rol : "centro_id"
+  seg__usuario |o--o{ seg__usuario_rol : "otorgado_por"
+  seg__rol ||--o{ seg__segregacion_funciones : "rol_a_id"
+  seg__rol |o--o{ seg__rol : "rol_padre_id"
+  seg__usuario ||--o{ seg__usuario_rol : "usuario_id"
+  org__organizacion ||--o{ org__organizacion_actor : "organizacion_id"
+  org__organizacion ||--o{ org__centro : "organizacion_id"
+  org__organizacion ||--o{ seg__usuario : "organizacion_id"
+  org__ubicacion |o--o{ org__ubicacion : "ubicacion_padre_id"
+  org__centro ||--o{ org__ubicacion : "centro_id"
+  seg__rol ||--o{ seg__actor_rol_mapeo : "rol_id"
+  org__organizacion |o--o{ seg__usuario_rol : "organizacion_id"
+  seg__usuario ||--o{ seg__habilitacion_tecnica : "usuario_id"
+  seg__ecosistema ||--o{ seg__usuario : "ecosistema_id"
+  seg__rol ||--o{ seg__usuario_rol : "rol_id"
+  seg__rol ||--o{ seg__rol_permiso : "rol_id"
+  org__centro ||--o{ org__centro_funcion : "centro_id"
+  org__organizacion |o--o{ org__organizacion : "organizacion_padre_id"
+  seg__rol ||--o{ seg__segregacion_funciones : "rol_b_id"
+  seg__permiso ||--o{ seg__rol_permiso : "permiso_id"

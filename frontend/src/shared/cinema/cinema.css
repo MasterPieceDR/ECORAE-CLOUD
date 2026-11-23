@@ -1,0 +1,15 @@
+/* Piezas de animación comunes. El aspecto de cada versión vive en su propio tema. */
+.cin-m { display: inline-block; overflow: clip; overflow-clip-margin: .12em; vertical-align: top; padding-bottom: .1em; margin-bottom: -.1em; }
+.cin-i { display: inline-block; will-change: transform; }
+.cin-w { display: inline-block; white-space: nowrap; }
+.cin-word { display: inline-block; }
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.cin-cursor { position: fixed; inset: 0; z-index: 9999; pointer-events: none; display: none; }
+.cin-cursor.is-on { display: block; }
+.cin-cursor.is-off { display: none; }
+.cin-cursor > i { position: absolute; left: 0; top: 0; border-radius: 50%; }
+.cin-cursor > i:first-child { width: 6px; height: 6px; margin: -3px; background: var(--cursor, #fff); }
+.cin-cursor > i:last-child { width: 38px; height: 38px; margin: -19px; border: 1px solid var(--cursor, #fff); opacity: .5; transition: width .25s, height .25s, margin .25s, opacity .25s, background .25s; }
+.cin-cursor.is-link > i:last-child { width: 68px; height: 68px; margin: -34px; opacity: .9; background: color-mix(in srgb, var(--cursor, #fff) 14%, transparent); }
+@media (prefers-reduced-motion: reduce) { .cin-m { overflow: visible; } }

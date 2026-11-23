@@ -1,0 +1,85 @@
+caso,descripcion,estado,detalle
+CP-02,Registro de 3 dispositivos y 1 lote con historial inicial,PASS,
+CP-02,Código duplicado en el ecosistema,PASS,"23505: duplicate key value violates unique constraint ""objeto_trazable_ecosistema_id_codigo_key"""
+CP-02,Número de serie duplicado para la misma marca,PASS,"23505: duplicate key value violates unique constraint ""dispositivo_marca_id_numero_serie_key"""
+CP-02,Atributos obligatorios de la categoría,PASS,"EC422: Faltan atributos obligatorios para PORTATIL: [""ram_gb"", ""almacenamiento_gb""]"
+CP-01,Un generador no registra equipos de otra organización,PASS,EC403: Un generador solo registra equipos de su propia organización
+RN-01,La identidad del objeto es inmutable,PASS,EC422: RN-01: la identidad de un objeto trazable es inmutable
+RN-01,El estado no se cambia por UPDATE directo,PASS,"EC422: Estado, clasificación y ubicación solo cambian mediante las funciones de dominio"
+CP-03,La solicitud propaga el estado del lote a sus 3 miembros,PASS,
+CP-03,Transición inválida: recibir en C1 algo aún no recolectado no está en T (RECOLECCION_SOLICITADA→RECIBIDO),PASS,EC409: Transición no permitida para LOT-UNIV-01: RECOLECCION_SOLICITADA → RECIBIDO
+RN-05,La recolección consume capacidad del arco G1→C1,PASS,
+RNF-10,Fotografía con metadatos EXIF/GPS es rechazada,PASS,EC422: RNF-10: las fotografías deben subirse sin metadatos EXIF/GPS
+CP-01,Operador de C2 no puede recibir en C1 (alcance por centro),PASS,EC403: Acceso denegado: el usuario 11 no tiene el permiso RECEPCION.REGISTRAR en el centro 3
+RN-03,Recepción sin evidencia es rechazada,PASS,EC422: La transición EN_RECOLECCION → RECIBIDO requiere evidencia vinculada
+RN-06,Recepción: 3 unidades PENDIENTE en el inventario de C1,PASS,
+REC,Ubicación recursiva: EST-01 cuelga de ZONA-1 y BOD-A (nivel 4),PASS,
+RN-06,Despacho atómico: saldo de C1 vuelve a 0 y kardex con 3 salidas,PASS,
+RN-03,Confirmar traslado sin evidencia,PASS,EC422: La transición EN_TRANSFERENCIA → RECIBIDO requiere evidencia vinculada
+RN-03,"Traslado cerrado con origen, destino, responsable, confirmación y evidencia",PASS,
+CP-03,Llegan RECIBIDO a evaluación; el lote queda DESAGRUPADO y sin miembros vigentes,PASS,
+RN-02,Un operador (no técnico) no puede evaluar,PASS,EC403: Acceso denegado: el usuario 10 no tiene el permiso EVALUACION.REGISTRAR en el centro 1
+RN-02,Técnico de C2 no evalúa en E1 (alcance),PASS,EC403: Acceso denegado: el usuario 8 no tiene el permiso EVALUACION.REGISTRAR en el centro 1
+RN-02,Destino incompatible con la clasificación (matriz),PASS,"23503: insert or update on table ""evaluacion_tecnica"" violates foreign key constraint ""evaluacion_tecnica_clasificacion_id_tipo_destino_sugerido__fkey"""
+RN-02,Criterios obligatorios faltantes (trigger diferido al confirmar),PASS,"EC422: Evaluación incompleta: faltan criterios obligatorios (DATOS_PRESENTES, PANTALLA_FUNCIONAL, DANO_FISICO)"
+RN-02,Clasificaciones registradas por técnico habilitado; saldo se reubica de PENDIENTE a su clasificación,PASS,
+RN-02,La evaluación es inmutable (corrección = reevaluación),PASS,EC422: Una evaluación técnica no se edita: registre una reevaluación
+RN-04,Un NO_RECUPERABLE no puede ir a un beneficiario,PASS,EC422: RN-02/RN-04: la clasificación de MON-001 no admite el destino BENEFICIARIO
+RN-04,Un RECICLABLE no puede ir a reacondicionamiento,PASS,EC422: RN-02/RN-04: la clasificación de LAP-002 no admite el destino REACONDICIONAMIENTO
+CP-03,LAP-001 y LAP-002 en tratamiento; jerarquía de roles: el coordinador confirmó D1 como operador,PASS,
+RN-02,Reevaluación sin motivo,PASS,EC422: La reevaluación exige un motivo
+REC,Cadena de reevaluaciones: la nueva apunta a la anterior y solo una queda vigente,PASS,
+RN-09,Equipo con almacenamiento sin certificado de borrado no se asigna,PASS,EC422: RN-09: LAP-001 almacena datos y no tiene certificado de borrado seguro
+CP-01,Solo la organización beneficiaria confirma la entrega,PASS,EC403: Solo la organización beneficiaria confirma esta entrega
+RN-08,Cierre con fecha de confirmación futura,PASS,EC422: RN-08: fecha de confirmación fuera de rango
+RN-08,Cierre sin evidencia,PASS,EC422: RN-08: el cierre requiere evidencia de confirmación
+CP-14,LAP-001: ciclo completo REGISTRADO→…→CERRADO con destino REUTILIZACION,PASS,
+RN-08,Fracciones recuperadas superiores al peso del equipo,PASS,EC422: Las fracciones recuperadas (3.000 kg) superan el peso del equipo (1.800 kg)
+RN-08,LAP-002 cerrado con destino RECICLAJE y sin saldo en K1,PASS,
+R-04,Entrega directa sin solicitud previa: REGISTRADO→RECIBIDO,PASS,
+ADR-004,Sin excepción vigente el arco C2→K1 no se usa,PASS,EC422: La excepción que habilita C2 → K1 no está vigente
+ADR-004,No se crea un arco ACOPIO→RECICLAJE sin excepción,PASS,EC422: Este arco requiere una excepción aprobada por el Comité de Arquitectura
+CP-03,Arco inexistente en el grafo (C2→B1),PASS,EC422: No existe arista activa C2 → B1
+ADR-004,Preclasificado en C2 viaja C2→K1 con excepción aprobada,PASS,
+RN-05,C1→E1 admite 1800 kg/semana: un envío de 1850 kg se rechaza,PASS,EC422: RN-05: la arista 10 no tiene capacidad (7.100 KG/SEMANA usado + 1850.000 solicitado > 1800.000)
+CP-05,"Rollback completo: sin traslado, saldo intacto y MON-002 sigue RECIBIDO en C1",PASS,
+RN-06,Saldo nunca negativo: salida sin existencias,PASS,EC422: RN-06: saldo insuficiente en la ubicación 2 para el objeto 1
+CP-04,No se elimina una organización con objetos asociados (RESTRICT),PASS,"23503: update or delete on table ""organizacion"" violates foreign key constraint ""organizacion_organizacion_padre_id_fkey"" on table ""organizacion"""
+CP-04,Capacidades con vigencias solapadas se rechazan,PASS,"23P01: conflicting key value violates exclusion constraint ""capacidad_arista_arista_id_unidad_id_vigencia_excl"""
+CP-04,Un objeto no pertenece a dos lotes a la vez,PASS,"23P01: conflicting key value violates exclusion constraint ""lote_composicion_objeto_id_vigencia_excl"""
+REC,Ciclo de lotes anidados,PASS,EC422: Ciclo de lotes: el lote 12 ya está contenido en 13
+REC,Ciclo en el árbol de categorías,PASS,EC422: Ciclo detectado en cat.categoria_raee: el nodo 4 ya es ancestro de su nuevo padre
+REC,Ciclo en la jerarquía de organizaciones,PASS,EC422: Ciclo detectado en org.organizacion: 1 no puede descender de sí mismo
+REC,Ciclo en la herencia de roles,PASS,EC422: Ciclo detectado en seg.rol: 8 no puede descender de sí mismo
+REC,Ciclo en la herencia de escenarios,PASS,EC422: Ciclo detectado en red.escenario_red: 1 no puede descender de sí mismo
+REC,Árbol de categorías: PORTATIL desciende de TIC y de RAEE (ltree),PASS,
+SoD,Segregación de funciones: un administrador no puede ser técnico,PASS,EC422: Segregación de funciones: roles incompatibles (ADMINISTRADOR / TECNICO_EVALUADOR: Quien gestiona usuarios no clasifica equipos)
+RN-01,El historial de estados es inmutable,PASS,EC422: La tabla trz.historial_estado_202611 es de solo inserción (registro histórico inmutable)
+RN-01,El kardex es inmutable,PASS,EC422: La tabla inv.movimiento_inventario_202611 es de solo inserción (registro histórico inmutable)
+CP-01,RLS: universidad ve lo suyo y lo de su sede (5 objetos),PASS,
+CP-01,RLS: la sede sur no ve lo de la matriz (1),PASS,
+CP-01,RLS: municipio solo ve su equipo (1),PASS,
+CP-01,RLS: otro ecosistema no ve nada de RCM (0),PASS,
+CP-01,RLS: beneficiario solo ve lo asignado (1),PASS,
+CP-01,RLS: auditor ve todo el ecosistema (8),PASS,
+RNF-03,El rol de la API no lee correos de usuarios,PASS,42501: permission denied for table usuario
+RNF-03,El rol de la API no escribe tablas directamente,PASS,42501: permission denied for table historial_estado
+RNF-03,El rol de la API no lee claves S3,PASS,42501: permission denied for table evidencia
+RN-07,Evidencia restringida invisible para el generador (0) y visible para el auditor (1),PASS,
+RN-07,"Descarga por propósito: auditor PERMITIDO, operador DENEGADO y ambos registrados",PASS,
+MCP,"tools/list por rol: generador 6 herramientas, coordinador 11",PASS,
+MCP,Herramienta fuera del rol: DENEGADO,PASS,
+MCP,Escritura sin confirmación humana: PENDIENTE_CONFIRMACION,PASS,
+MCP,Escritura confirmada: AUTORIZADO,PASS,
+MCP,Herramienta inexistente: DENEGADO + evento de seguridad,PASS,
+MCP,Límite por minuto: LIMITE_EXCEDIDO tras 10 llamadas,PASS,
+MCP,Recurso ecoraee://objeto/LAP-001 devuelve la ficha completa,PASS,
+RNF-10,Bitácora MCP sin datos personales (correo enmascarado),PASS,
+MCP,El rol MCP no puede ejecutar comandos no registrados (fn_transferir),PASS,42501: permission denied for function fn_transferir
+AUD,Cada cambio de LAP-001 quedó auditado con usuario y canal,PASS,
+AUD,Reconstrucción as-of: LAP-001 estaba EN_TRATAMIENTO antes de su tratamiento,PASS,
+AUD,Sello de integridad verificado,PASS,
+AUD,Manipular una fila de auditoría invalida el sello,PASS,
+IND,Indicadores calculados (9) con serie histórica,PASS,
+IND,Tasa de reutilización = 50 % (1 de 2 cierres),PASS,
+IND,Material recuperado = 1.65 kg,PASS,

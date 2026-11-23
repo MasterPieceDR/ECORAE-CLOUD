@@ -1,0 +1,227 @@
+erDiagram
+  evd__acceso_evidencia {
+    bigint id PK
+    timestamp_with_time_zone ocurrido_en
+    bigint evidencia_id FK
+    bigint usuario_id FK
+    smallint proposito_id FK
+    character_varying resultado
+    character_varying canal
+  }
+  evd__evidencia {
+    bigint id PK
+    uuid uid
+    bigint ecosistema_id FK
+    smallint tipo_evidencia_id FK
+    character_varying s3_bucket
+    character_varying s3_clave
+    character_varying s3_version_id
+    cat.d_sha256 sha256
+    character_varying mime
+    bigint tamano_bytes
+    character_varying nivel_acceso
+    boolean metadatos_limpios
+    bigint subido_por FK
+    timestamp_with_time_zone subido_en
+    date retener_hasta
+    character_varying estado
+  }
+  evd__evidencia_vinculo {
+    bigint id PK
+    bigint evidencia_id FK
+    bigint documento_id FK
+    bigint objeto_id FK
+    timestamp_with_time_zone vinculado_en
+    bigint vinculado_por FK
+  }
+  evd__politica_acceso {
+    smallint rol_id PK
+    smallint tipo_evidencia_id PK
+    smallint proposito_id PK
+    boolean puede_descargar
+  }
+  ind__alerta {
+    bigint id PK
+    smallint regla_id FK
+    bigint ecosistema_id FK
+    bigint objeto_id FK
+    bigint arista_id FK
+    bigint centro_id FK
+    text mensaje
+    character_varying estado
+    timestamp_with_time_zone generada_en
+    timestamp_with_time_zone resuelta_en
+    bigint resuelta_por FK
+  }
+  ind__indicador {
+    smallint id PK
+    cat.d_codigo codigo
+    character_varying nombre
+    character_varying dimension
+    character_varying materia_origen
+    text formula
+    character_varying fuente
+    character_varying unidad
+    numeric meta
+    character_varying sentido
+    boolean activo
+  }
+  ind__medicion_indicador {
+    bigint id PK
+    smallint indicador_id FK
+    bigint ecosistema_id FK
+    bigint centro_id FK
+    daterange periodo
+    numeric valor
+    timestamp_with_time_zone calculado_en
+  }
+  ind__regla_alerta {
+    smallint id PK
+    cat.d_codigo codigo
+    character_varying nombre
+    character_varying severidad
+    text condicion
+    numeric umbral
+    boolean activa
+  }
+  gob__decision_arquitectura {
+    integer id PK
+    cat.d_codigo codigo
+    character_varying titulo
+    text contexto
+    text decision
+    text consecuencias
+    text_arr materias
+    character_varying estado
+    integer sustituida_por_id FK
+    date fecha
+  }
+  gob__excepcion_regla {
+    bigint id PK
+    cat.d_codigo codigo
+    character_varying regla
+    text descripcion
+    integer decision_id FK
+    bigint aprobada_por FK
+    daterange vigencia
+    character_varying estado
+  }
+  gob__riesgo {
+    integer id PK
+    cat.d_codigo codigo
+    character_varying categoria
+    text descripcion
+    smallint probabilidad
+    smallint impacto
+    smallint nivel
+    text control
+    text objeto_bd
+    character_varying estado
+    character_varying materia_origen
+  }
+  aud__evento_seguridad {
+    bigint id PK
+    timestamp_with_time_zone ocurrido_en
+    character_varying tipo
+    bigint usuario_id
+    jsonb detalle
+    character ip_hash
+    character_varying request_id
+  }
+  aud__log_cambio {
+    bigint id PK
+    timestamp_with_time_zone ocurrido_en PK
+    name esquema
+    name tabla
+    character operacion
+    jsonb pk
+    jsonb datos_antes
+    jsonb datos_despues
+    text_arr campos_cambiados
+    bigint usuario_id
+    name usuario_bd
+    character_varying canal
+    character_varying request_id
+    bigint txid
+    cat.d_sha256 hash_registro
+  }
+  aud__sello_integridad {
+    bigint id PK
+    tstzrange periodo
+    bigint registros
+    cat.d_sha256 hash_periodo
+    cat.d_sha256 hash_sello_anterior
+    timestamp_with_time_zone sellado_en
+  }
+  mcp__herramienta {
+    smallint id PK
+    character_varying nombre
+    character_varying titulo
+    text descripcion
+    character_varying tipo
+    text objeto_sql
+    jsonb esquema_entrada
+    jsonb esquema_salida
+    boolean requiere_confirmacion
+    smallint limite_por_minuto
+    character_varying version
+    boolean activa
+  }
+  mcp__herramienta_rol {
+    smallint herramienta_id PK
+    smallint rol_id PK
+  }
+  mcp__invocacion {
+    bigint id PK
+    timestamp_with_time_zone ocurrido_en PK
+    smallint herramienta_id FK
+    smallint recurso_id FK
+    character_varying nombre_solicitado
+    bigint usuario_id
+    character_varying sesion_mcp
+    jsonb argumentos
+    cat.d_sha256 argumentos_hash
+    character_varying estado
+    integer filas
+    integer duracion_ms
+    text error
+    character_varying request_id
+  }
+  mcp__recurso {
+    smallint id PK
+    character_varying uri_plantilla
+    character_varying nombre
+    text descripcion
+    text objeto_sql
+    character_varying mime
+    boolean activo
+  }
+  integ__idempotencia {
+    uuid clave PK
+    bigint usuario_id
+    character_varying operacion
+    cat.d_sha256 hash_solicitud
+    jsonb respuesta
+    timestamp_with_time_zone creado_en
+    timestamp_with_time_zone expira_en
+  }
+  integ__outbox_evento {
+    bigint id PK
+    timestamp_with_time_zone ocurrido_en
+    bigint ecosistema_id
+    character_varying agregado
+    bigint agregado_id
+    character_varying tipo_evento
+    jsonb payload
+    timestamp_with_time_zone publicado_en
+    smallint intentos
+  }
+  mcp__recurso |o--o{ mcp__invocacion : "recurso_id"
+  ind__regla_alerta ||--o{ ind__alerta : "regla_id"
+  evd__evidencia ||--o{ evd__evidencia_vinculo : "evidencia_id"
+  mcp__herramienta |o--o{ mcp__invocacion : "herramienta_id"
+  mcp__herramienta ||--o{ mcp__herramienta_rol : "herramienta_id"
+  gob__decision_arquitectura |o--o{ gob__excepcion_regla : "decision_id"
+  evd__evidencia ||--o{ evd__acceso_evidencia : "evidencia_id"
+  gob__decision_arquitectura |o--o{ gob__decision_arquitectura : "sustituida_por_id"
+  ind__indicador ||--o{ ind__medicion_indicador : "indicador_id"

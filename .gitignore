@@ -1,0 +1,26 @@
+# Dependencias y compilados
+node_modules/
+dist/
+__pycache__/
+.pytest_cache/
+*.pyc
+.venv/
+venv/
+
+# Secretos y configuración local (nunca al repositorio)
+.env
+.env.*
+!.env.example
+*.pem
+token_prueba.txt
+probar_token.bat
+
+# Datos y archivos generados en local
+backend/almacen/
+almacen/
+verificacion.txt
+datos_video.txt
+
+# Paquetes y parches antiguos (no forman parte del código)
+*.zip
+backend/wheels/

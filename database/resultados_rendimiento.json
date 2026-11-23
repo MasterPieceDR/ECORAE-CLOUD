@@ -1,0 +1,54 @@
+{
+  "objetos": 60010,
+  "historial": 480057,
+  "resultados": [
+    {
+      "id": "Q1",
+      "consulta": "Línea de trazabilidad de un objeto (CP-14)",
+      "indice": "ix_historial_objeto",
+      "sin_ms": 24.816,
+      "con_ms": 0.044,
+      "plan_sin": "Gather Merge → Sort → Append → Seq Scan → Seq Scan → Seq Scan → Seq Scan → Seq Scan → Seq Scan → Seq Scan → Seq Scan",
+      "plan_con": "Sort → Append → Index Scan (historial_estado_202609_objeto_id_ocurrido_en_idx) → Index Scan (historial_estado_202610_objeto_id_ocurrido_en_idx) → Index Scan (historial_estado_202611_objeto_id_ocurrido_en_idx) → Index Scan (historial_estado_202612_objeto_id_ocurrido_en_idx) → Index Scan (historial_estado_202701_objeto_id_ocurrido_en_idx) → Index Scan (historial_estado_202702_objeto_id_ocurrido_en_idx) → Seq Scan → Seq Scan",
+      "bloques_sin": 5029,
+      "bloques_con": 13,
+      "mejora_x": 564.0
+    },
+    {
+      "id": "Q2",
+      "consulta": "Objetos activos por estado (tablero operativo)",
+      "indice": "ix_objeto_estado_activo",
+      "sin_ms": 5.15,
+      "con_ms": 0.011,
+      "plan_sin": "Aggregate → Seq Scan",
+      "plan_con": "Aggregate → Index Only Scan (ix_objeto_estado_activo)",
+      "bloques_sin": 1133,
+      "bloques_con": 2,
+      "mejora_x": 468.2
+    },
+    {
+      "id": "Q3",
+      "consulta": "Atributo JSONB selectivo (procesador poco frecuente)",
+      "indice": "ix_dispositivo_atributos",
+      "sin_ms": 13.712,
+      "con_ms": 0.096,
+      "plan_sin": "Aggregate → Seq Scan",
+      "plan_con": "Aggregate → Bitmap Heap Scan → Bitmap Index Scan (ix_dispositivo_atributos)",
+      "bloques_sin": 1154,
+      "bloques_con": 62,
+      "mejora_x": 142.8
+    },
+    {
+      "id": "Q4",
+      "consulta": "Atributo JSONB poco selectivo (20 % de las filas)",
+      "indice": "ix_dispositivo_atributos",
+      "sin_ms": 18.325,
+      "con_ms": 6.585,
+      "plan_sin": "Aggregate → Seq Scan",
+      "plan_con": "Aggregate → Bitmap Heap Scan → Bitmap Index Scan (ix_dispositivo_atributos)",
+      "bloques_sin": 1154,
+      "bloques_con": 1159,
+      "mejora_x": 2.8
+    }
+  ]
+}

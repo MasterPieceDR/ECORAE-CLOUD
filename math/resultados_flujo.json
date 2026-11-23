@@ -1,0 +1,285 @@
+[
+  {
+    "escenario": "E0",
+    "flujo_maximo": 200.0,
+    "generacion": 370.0,
+    "cobertura": 54,
+    "cortes": [
+      {
+        "numero": 1,
+        "capacidad": 200.0,
+        "aristas": [
+          [
+            "C2",
+            "K1"
+          ]
+        ],
+        "nodos": [
+          "E1"
+        ],
+        "virtuales": [],
+        "lado_fuente": [
+          "C1",
+          "C2",
+          "E1",
+          "G1",
+          "G2",
+          "G3"
+        ]
+      }
+    ],
+    "ejecucion_id": 1,
+    "hash": "1d3ee2f9baa4358a7d96f0c851bd49b7278fdaf6a5436d873ae410aee8a468e8"
+  },
+  {
+    "escenario": "E1",
+    "flujo_maximo": 225.0,
+    "generacion": 370.0,
+    "cobertura": 61,
+    "cortes": [
+      {
+        "numero": 1,
+        "capacidad": 225.0,
+        "aristas": [
+          [
+            "C2",
+            "K1"
+          ],
+          [
+            "E1",
+            "D1"
+          ],
+          [
+            "E1",
+            "K1"
+          ],
+          [
+            "E1",
+            "R1"
+          ]
+        ],
+        "nodos": [],
+        "virtuales": [],
+        "lado_fuente": [
+          "C1",
+          "C2",
+          "E1",
+          "G1",
+          "G2",
+          "G3"
+        ]
+      },
+      {
+        "numero": 2,
+        "capacidad": 225.0,
+        "aristas": [
+          [
+            "E1",
+            "D1"
+          ],
+          [
+            "R1",
+            "B1"
+          ]
+        ],
+        "nodos": [],
+        "virtuales": [
+          [
+            "K1",
+            "t"
+          ]
+        ],
+        "lado_fuente": [
+          "C1",
+          "C2",
+          "E1",
+          "G1",
+          "G2",
+          "G3",
+          "K1",
+          "R1"
+        ]
+      },
+      {
+        "numero": 3,
+        "capacidad": 225.0,
+        "aristas": [
+          [
+            "E1",
+            "D1"
+          ]
+        ],
+        "nodos": [],
+        "virtuales": [
+          [
+            "B1",
+            "t"
+          ],
+          [
+            "K1",
+            "t"
+          ]
+        ],
+        "lado_fuente": [
+          "B1",
+          "C1",
+          "C2",
+          "E1",
+          "G1",
+          "G2",
+          "G3",
+          "K1",
+          "R1"
+        ]
+      }
+    ],
+    "ejecucion_id": 2,
+    "hash": "c2939dcb335caf83dc481e2a5435291e52440bda30ce6064b60c59416590c0fb"
+  },
+  {
+    "escenario": "E2",
+    "flujo_maximo": 200.0,
+    "generacion": 481.0,
+    "cobertura": 42,
+    "cortes": [
+      {
+        "numero": 1,
+        "capacidad": 200.0,
+        "aristas": [
+          [
+            "C2",
+            "K1"
+          ]
+        ],
+        "nodos": [
+          "E1"
+        ],
+        "virtuales": [],
+        "lado_fuente": [
+          "C1",
+          "C2",
+          "E1",
+          "G1",
+          "G2",
+          "G3"
+        ]
+      }
+    ],
+    "ejecucion_id": 3,
+    "hash": "2db97a3d952dbe650b72e60c4dee3f5b03bc9a361154f7f22c499609052a9d04"
+  },
+  {
+    "escenario": "E3",
+    "flujo_maximo": 175.0,
+    "generacion": 370.0,
+    "cobertura": 47,
+    "cortes": [
+      {
+        "numero": 1,
+        "capacidad": 175.0,
+        "aristas": [
+          [
+            "E1",
+            "D1"
+          ],
+          [
+            "R1",
+            "B1"
+          ]
+        ],
+        "nodos": [],
+        "virtuales": [
+          [
+            "K1",
+            "t"
+          ]
+        ],
+        "lado_fuente": [
+          "C1",
+          "C2",
+          "E1",
+          "G1",
+          "G2",
+          "G3",
+          "K1",
+          "R1"
+        ]
+      },
+      {
+        "numero": 2,
+        "capacidad": 175.0,
+        "aristas": [
+          [
+            "E1",
+            "D1"
+          ]
+        ],
+        "nodos": [],
+        "virtuales": [
+          [
+            "B1",
+            "t"
+          ],
+          [
+            "K1",
+            "t"
+          ]
+        ],
+        "lado_fuente": [
+          "B1",
+          "C1",
+          "C2",
+          "E1",
+          "G1",
+          "G2",
+          "G3",
+          "K1",
+          "R1"
+        ]
+      }
+    ],
+    "ejecucion_id": 4,
+    "hash": "7b980fb27fb90d792a0d1b74fb32554a22b5c9f859d15f81ec94419aa8561672"
+  },
+  {
+    "escenario": "E4",
+    "flujo_maximo": 280.0,
+    "generacion": 370.0,
+    "cobertura": 76,
+    "cortes": [
+      {
+        "numero": 1,
+        "capacidad": 280.0,
+        "aristas": [
+          [
+            "C1",
+            "E1"
+          ],
+          [
+            "C2",
+            "E1"
+          ],
+          [
+            "C2",
+            "K1"
+          ],
+          [
+            "G3",
+            "E1"
+          ]
+        ],
+        "nodos": [],
+        "virtuales": [],
+        "lado_fuente": [
+          "C1",
+          "C2",
+          "G1",
+          "G2",
+          "G3"
+        ]
+      }
+    ],
+    "ejecucion_id": 5,
+    "hash": "2251b80b820762f735a1d9277bd0cbcd89e6eb8f778eb43cc362553ca039ca88"
+  }
+]

@@ -1,0 +1,264 @@
+erDiagram
+  trz__dispositivo {
+    bigint objeto_id PK
+    character_varying tipo_objeto FK
+    smallint categoria_id FK
+    integer marca_id FK
+    integer modelo_id FK
+    character_varying numero_serie
+    smallint anio_fabricacion
+    cat.d_peso peso_kg
+    boolean contiene_almacenamiento
+    jsonb atributos
+    bigint componente_de_id FK
+  }
+  trz__historial_estado {
+    bigint id PK
+    timestamp_with_time_zone ocurrido_en PK
+    bigint objeto_id FK
+    smallint estado_origen_id FK
+    smallint estado_destino_id FK
+    smallint transicion_id FK
+    bigint documento_id FK
+    bigint usuario_id FK
+    character_varying canal
+    text observacion
+  }
+  trz__lote {
+    bigint objeto_id PK
+    character_varying tipo_objeto FK
+    character_varying proposito
+    text descripcion
+    cat.d_peso peso_declarado_kg
+    timestamp_with_time_zone sellado_en
+  }
+  trz__lote_composicion {
+    bigint id PK
+    bigint lote_id FK
+    bigint objeto_id FK
+    tstzrange vigencia
+    bigint agregado_por FK
+    text motivo
+  }
+  trz__lote_genealogia {
+    bigint lote_origen_id PK
+    bigint lote_resultante_id PK
+    character_varying operacion
+    bigint documento_id FK
+    timestamp_with_time_zone ocurrido_en
+  }
+  trz__objeto_trazable {
+    bigint id PK
+    uuid uid
+    bigint ecosistema_id FK
+    cat.d_codigo codigo
+    character_varying tipo_objeto
+    bigint organizacion_origen_id FK
+    smallint estado_actual_id FK
+    smallint clasificacion_actual_id FK
+    bigint ubicacion_actual_id FK
+    timestamp_with_time_zone registrado_en
+    bigint registrado_por FK
+    timestamp_with_time_zone cerrado_en
+    timestamp_with_time_zone creado_en
+    bigint creado_por
+    timestamp_with_time_zone actualizado_en
+    bigint actualizado_por
+    integer version
+  }
+  ops__asignacion_beneficiario {
+    bigint documento_id PK
+    character_varying tipo_documento FK
+    bigint objeto_id FK
+    bigint beneficiario_id FK
+    text criterio_asignacion
+    timestamp_with_time_zone entregado_en
+  }
+  ops__cierre_trazabilidad {
+    bigint documento_id PK
+    character_varying tipo_documento FK
+    bigint objeto_id FK
+    smallint tipo_destino_final_id FK
+    bigint organizacion_destino_id FK
+    timestamp_with_time_zone fecha_confirmacion
+    bigint confirmado_por FK
+    text observacion
+  }
+  ops__documento_item {
+    bigint id PK
+    bigint documento_id FK
+    bigint objeto_id FK
+    integer cantidad
+    cat.d_peso peso_kg
+    character_varying resultado
+    text observacion
+  }
+  ops__documento_operativo {
+    bigint id PK
+    uuid uid
+    bigint ecosistema_id FK
+    character_varying tipo_documento
+    character_varying numero
+    bigint centro_id FK
+    bigint organizacion_id FK
+    bigint responsable_id FK
+    bigint documento_referencia_id FK
+    character_varying estado_documento
+    timestamp_with_time_zone fecha_documento
+    timestamp_with_time_zone fecha_cierre
+    smallint motivo_anulacion_id FK
+    text observacion
+    timestamp_with_time_zone creado_en
+    bigint creado_por
+    timestamp_with_time_zone actualizado_en
+    bigint actualizado_por
+    integer version
+  }
+  ops__evaluacion_criterio {
+    bigint evaluacion_id PK
+    smallint criterio_id PK
+    boolean valor_booleano
+    numeric valor_numero
+    character_varying valor_texto
+    boolean cumple
+  }
+  ops__evaluacion_tecnica {
+    bigint documento_id PK
+    character_varying tipo_documento FK
+    bigint objeto_id FK
+    bigint tecnico_id FK
+    character_varying modalidad
+    smallint clasificacion_id FK
+    smallint tipo_destino_sugerido_id FK
+    boolean funcional
+    boolean requiere_borrado_datos
+    numeric puntaje
+    timestamp_with_time_zone evaluado_en
+    boolean vigente
+    bigint evaluacion_anterior_id FK
+    smallint motivo_reevaluacion_id FK
+  }
+  ops__recepcion {
+    bigint documento_id PK
+    character_varying tipo_documento FK
+    bigint centro_id FK
+    bigint ubicacion_id FK
+    bigint solicitud_id FK
+    timestamp_with_time_zone recibido_en
+    character_varying conformidad
+    cat.d_peso peso_verificado_kg
+  }
+  ops__recoleccion {
+    bigint documento_id PK
+    character_varying tipo_documento FK
+    bigint solicitud_id FK
+    bigint arista_id FK
+    integer unidades
+    cat.d_peso peso_kg
+    timestamp_with_time_zone fecha_programada
+    timestamp_with_time_zone fecha_ejecucion
+    character_varying transportista_ref
+  }
+  ops__secuencia_documento {
+    bigint ecosistema_id PK
+    character_varying tipo_documento PK
+    smallint anio PK
+    integer ultimo
+  }
+  ops__solicitud_recoleccion {
+    bigint documento_id PK
+    character_varying tipo_documento FK
+    bigint organizacion_generador_id FK
+    character_varying modalidad
+    bigint centro_destino_id FK
+    date fecha_preferida
+    character_varying sector_referencial
+    integer cantidad_estimada
+    cat.d_peso peso_estimado_kg
+  }
+  ops__transferencia {
+    bigint documento_id PK
+    character_varying tipo_documento FK
+    bigint arista_id FK
+    bigint ubicacion_origen_id FK
+    bigint ubicacion_destino_id FK
+    integer unidades
+    cat.d_peso peso_kg
+    character_varying estado_transferencia
+    character_varying transportista_ref
+    timestamp_with_time_zone despachado_en
+    timestamp_with_time_zone recibido_en
+    bigint confirmado_por FK
+  }
+  ops__tratamiento {
+    bigint documento_id PK
+    character_varying tipo_documento FK
+    bigint objeto_id FK
+    smallint tipo_tratamiento_id FK
+    bigint gestor_organizacion_id FK
+    timestamp_with_time_zone iniciado_en
+    timestamp_with_time_zone finalizado_en
+    character_varying resultado
+    text observacion
+  }
+  ops__tratamiento_fraccion {
+    bigint tratamiento_id PK
+    smallint material_id PK
+    cat.d_peso peso_kg
+  }
+  inv__movimiento_inventario {
+    bigint id PK
+    timestamp_with_time_zone ocurrido_en PK
+    bigint documento_id FK
+    bigint objeto_id FK
+    bigint ubicacion_id FK
+    smallint sentido
+    character_varying tipo_movimiento
+    integer unidades
+    cat.d_peso peso_kg
+    smallint categoria_id FK
+    smallint clasificacion_id FK
+    bigint par_movimiento_id
+    bigint usuario_id FK
+  }
+  inv__saldo_ubicacion {
+    bigint ubicacion_id PK
+    smallint categoria_id PK
+    smallint clasificacion_id PK
+    integer unidades
+    numeric peso_kg
+    timestamp_with_time_zone actualizado_en
+    integer version
+  }
+  trz__dispositivo ||--o{ ops__evaluacion_tecnica : "objeto_id"
+  ops__documento_operativo |o--o{ trz__lote_genealogia : "documento_id"
+  trz__lote ||--o{ trz__lote_composicion : "lote_id"
+  trz__dispositivo ||--o{ ops__asignacion_beneficiario : "objeto_id"
+  trz__objeto_trazable ||--o{ ops__tratamiento : "objeto_id"
+  ops__documento_operativo ||--o{ ops__recepcion : "documento_id"
+  ops__documento_operativo ||--o{ ops__transferencia : "documento_id"
+  ops__evaluacion_tecnica |o--o{ ops__evaluacion_tecnica : "evaluacion_anterior_id"
+  ops__documento_operativo |o--o{ trz__historial_estado : "documento_id"
+  trz__objeto_trazable ||--o{ trz__lote_composicion : "objeto_id"
+  ops__documento_operativo ||--o{ ops__asignacion_beneficiario : "documento_id"
+  trz__objeto_trazable ||--o{ ops__cierre_trazabilidad : "objeto_id"
+  ops__documento_operativo ||--o{ ops__evaluacion_tecnica : "documento_id"
+  trz__objeto_trazable ||--o{ trz__lote : "objeto_id"
+  ops__solicitud_recoleccion ||--o{ ops__recoleccion : "solicitud_id"
+  ops__documento_operativo ||--o{ ops__cierre_trazabilidad : "documento_id"
+  ops__solicitud_recoleccion |o--o{ ops__recepcion : "solicitud_id"
+  ops__documento_operativo ||--o{ ops__documento_item : "documento_id"
+  trz__objeto_trazable ||--o{ inv__movimiento_inventario : "objeto_id"
+  trz__objeto_trazable ||--o{ trz__dispositivo : "objeto_id"
+  ops__documento_operativo ||--o{ ops__tratamiento : "documento_id"
+  trz__objeto_trazable ||--o{ trz__historial_estado : "objeto_id"
+  trz__lote ||--o{ trz__lote_genealogia : "lote_resultante_id"
+  ops__evaluacion_tecnica ||--o{ ops__evaluacion_criterio : "evaluacion_id"
+  trz__objeto_trazable ||--o{ ops__documento_item : "objeto_id"
+  trz__dispositivo |o--o{ trz__dispositivo : "componente_de_id"
+  trz__lote ||--o{ trz__lote_genealogia : "lote_origen_id"
+  ops__documento_operativo ||--o{ inv__movimiento_inventario : "documento_id"
+  ops__documento_operativo ||--o{ ops__recoleccion : "documento_id"
+  ops__documento_operativo ||--o{ ops__solicitud_recoleccion : "documento_id"
+  ops__tratamiento ||--o{ ops__tratamiento_fraccion : "tratamiento_id"
+  ops__documento_operativo |o--o{ ops__documento_operativo : "documento_referencia_id"

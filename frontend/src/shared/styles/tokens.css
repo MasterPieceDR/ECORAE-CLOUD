@@ -1,0 +1,19 @@
+:root {
+  --bg: #06120D;
+  --bg-2: #0A1C14;
+  --glass: rgb(255 255 255 / .05);
+  --glass-2: rgb(255 255 255 / .09);
+  --line: rgb(255 255 255 / .12);
+  --text: #EEF6EF;
+  --muted: #9EB4A7;
+  --lime: #B6F36A;
+  --leaf: #2FA36B;
+  --coral: #FF8A68;
+  --sun: #F4C04E;
+  --sky: #7CC8FF;
+  --radius: 22px;
+  --display: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  --accent-font: 'Instrument Serif', Georgia, serif;
+  --cursor: #B6F36A;
+  color-scheme: dark;
+}

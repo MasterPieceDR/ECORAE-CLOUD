@@ -1,0 +1,34 @@
+digraph S {
+graph [rankdir=LR, fontname="Helvetica", nodesep=0.4, ranksep=0.55, pad=0.2];
+node [shape=box, style="rounded,filled", fillcolor="#DEEAF6", color="#2E75B6", fontname="Helvetica", fontsize=11];
+edge [fontname="Helvetica", fontsize=8, color="#595959", fontcolor="#404040", arrowsize=0.7];
+"REGISTRADO" [fillcolor="#E2EFDA", color="#548235", penwidth=2];
+"CERRADO" [fillcolor="#F2F2F2", color="#404040", peripheries=2];
+"ANULADO" [fillcolor="#F2F2F2", color="#404040", peripheries=2];
+"DESAGRUPADO" [fillcolor="#F2F2F2", color="#404040", peripheries=2];
+"REGISTRADO" -> "RECOLECCION_SOLICITADA" [label="solicitud"];
+"REGISTRADO" -> "RECIBIDO" [label="recepcion · ev"];
+"REGISTRADO" -> "ANULADO" [label="objeto"];
+"RECOLECCION_SOLICITADA" -> "EN_RECOLECCION" [label="recoleccion"];
+"RECOLECCION_SOLICITADA" -> "ANULADO" [label="objeto"];
+"EN_RECOLECCION" -> "RECIBIDO" [label="recepcion · ev"];
+"RECIBIDO" -> "EN_EVALUACION" [label="evaluacion"];
+"RECIBIDO" -> "CLASIFICADO" [label="evaluacion · clas"];
+"RECIBIDO" -> "EN_TRANSFERENCIA" [label="transferencia"];
+"RECIBIDO" -> "DESAGRUPADO" [label="lote"];
+"EN_EVALUACION" -> "CLASIFICADO" [label="evaluacion · clas"];
+"CLASIFICADO" -> "EN_TRANSFERENCIA" [label="transferencia · clas"];
+"CLASIFICADO" -> "ASIGNADO_BENEFICIARIO" [label="asignacion · ev · clas"];
+"CLASIFICADO" -> "DESAGRUPADO" [label="lote"];
+"EN_TRANSFERENCIA" -> "RECIBIDO" [label="transferencia · ev"];
+"EN_TRANSFERENCIA" -> "CLASIFICADO" [label="transferencia · ev · clas"];
+"EN_TRANSFERENCIA" -> "EN_TRATAMIENTO" [label="transferencia · ev · clas"];
+"EN_TRANSFERENCIA" -> "ASIGNADO_BENEFICIARIO" [label="transferencia · ev · clas"];
+"EN_TRATAMIENTO" -> "EN_EVALUACION" [label="tratamiento"];
+"EN_TRATAMIENTO" -> "TRATADO" [label="tratamiento · ev"];
+"TRATADO" -> "EN_TRANSFERENCIA" [label="transferencia · clas"];
+"TRATADO" -> "ASIGNADO_BENEFICIARIO" [label="asignacion · ev · clas"];
+"TRATADO" -> "CERRADO" [label="cierre · ev"];
+"TRATADO" -> "DESAGRUPADO" [label="lote"];
+"ASIGNADO_BENEFICIARIO" -> "CERRADO" [label="cierre · ev"];
+}

@@ -1,0 +1,104 @@
+erDiagram
+  red__arista {
+    bigint id PK
+    bigint ecosistema_id FK
+    bigint nodo_origen_id FK
+    bigint nodo_destino_id FK
+    bigint excepcion_id FK
+    boolean activa
+  }
+  red__capacidad_arista {
+    bigint id PK
+    bigint arista_id FK
+    cat.d_cantidad capacidad
+    smallint unidad_id FK
+    character_varying periodo
+    tstzrange vigencia
+    character_varying fuente
+  }
+  red__corte_minimo {
+    bigint id PK
+    bigint ejecucion_id FK
+    smallint numero_corte
+    cat.d_cantidad capacidad_corte
+    text_arr lado_fuente
+  }
+  red__corte_minimo_arista {
+    bigint corte_id PK
+    bigint arista_id PK
+  }
+  red__ejecucion_flujo {
+    bigint id PK
+    bigint escenario_id FK
+    character_varying algoritmo
+    character_varying version_modulo
+    jsonb parametros
+    cat.d_sha256 hash_entrada
+    cat.d_cantidad flujo_maximo
+    character_varying estado
+    timestamp_with_time_zone iniciado_en
+    timestamp_with_time_zone finalizado_en
+    integer duracion_ms
+    bigint ejecutado_por FK
+    character_varying canal
+    text mensaje_error
+  }
+  red__escenario_arista {
+    bigint escenario_id PK
+    bigint arista_id PK
+    cat.d_cantidad capacidad_ajustada
+    boolean activa
+    text motivo
+  }
+  red__escenario_nodo {
+    bigint escenario_id PK
+    bigint nodo_id PK
+    cat.d_cantidad oferta
+    cat.d_cantidad demanda
+  }
+  red__escenario_red {
+    bigint id PK
+    bigint ecosistema_id FK
+    cat.d_codigo codigo
+    character_varying nombre
+    text descripcion
+    bigint escenario_base_id FK
+    timestamp_with_time_zone fecha_referencia
+    smallint unidad_id FK
+    character_varying periodo
+    character_varying estado
+    bigint creado_por FK
+    timestamp_with_time_zone creado_en
+  }
+  red__nodo {
+    bigint id PK
+    bigint ecosistema_id FK
+    cat.d_codigo codigo
+    character_varying nombre
+    smallint tipo_nodo_id FK
+    bigint centro_id FK
+    bigint organizacion_id FK
+    boolean activo
+  }
+  red__resultado_flujo_arista {
+    bigint ejecucion_id PK
+    bigint arista_id PK
+    cat.d_cantidad capacidad
+    cat.d_cantidad flujo
+    boolean saturada
+    numeric utilizacion
+  }
+  red__nodo ||--o{ red__arista : "nodo_destino_id"
+  red__ejecucion_flujo ||--o{ red__corte_minimo : "ejecucion_id"
+  red__escenario_red |o--o{ red__escenario_red : "escenario_base_id"
+  red__arista ||--o{ red__resultado_flujo_arista : "arista_id"
+  red__escenario_red ||--o{ red__escenario_arista : "escenario_id"
+  red__nodo ||--o{ red__arista : "nodo_origen_id"
+  red__nodo ||--o{ red__escenario_nodo : "nodo_id"
+  red__arista ||--o{ red__escenario_arista : "arista_id"
+  red__arista ||--o{ red__corte_minimo_arista : "arista_id"
+  red__corte_minimo ||--o{ red__corte_minimo_arista : "corte_id"
+  red__escenario_red ||--o{ red__ejecucion_flujo : "escenario_id"
+  red__escenario_red ||--o{ red__escenario_nodo : "escenario_id"
+  red__arista ||--o{ red__capacidad_arista : "arista_id"
+  red__ejecucion_flujo ||--o{ red__resultado_flujo_arista : "ejecucion_id"
