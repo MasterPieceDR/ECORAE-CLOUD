@@ -1,0 +1,389 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "EcoRAEE - 05-computo",
+  "Parameters": {
+    "Prefijo": {
+      "Type": "String",
+      "Default": "ecoraee-lab"
+    },
+    "Entorno": {
+      "Type": "String",
+      "Default": "lab"
+    },
+    "Responsable": {
+      "Type": "String"
+    },
+    "BucketArtefactos": {
+      "Type": "String"
+    },
+    "ClaveArtefacto": {
+      "Type": "String"
+    },
+    "SecretoServiciosArn": {
+      "Type": "String"
+    },
+    "SecretoJwtArn": {
+      "Type": "String"
+    },
+    "BucketEvidencias": {
+      "Type": "String"
+    },
+    "BucketContenidos": {
+      "Type": "String"
+    },
+    "OrigenWeb": {
+      "Type": "String"
+    },
+    "GrupoLogs": {
+      "Type": "String"
+    },
+    "AmiId": {
+      "Type": "AWS::EC2::Image::Id"
+    },
+    "TipoInstancia": {
+      "Type": "String",
+      "Default": "t3.small"
+    },
+    "AuthModo": {
+      "Type": "String",
+      "Default": "local",
+      "AllowedValues": [
+        "local"
+      ]
+    }
+  },
+  "Resources": {
+    "ALB": {
+      "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+      "Properties": {
+        "Scheme": "internet-facing",
+        "Subnets": [
+          {
+            "Fn::ImportValue": {
+              "Fn::Sub": "${Prefijo}-Publica1"
+            }
+          },
+          {
+            "Fn::ImportValue": {
+              "Fn::Sub": "${Prefijo}-Publica2"
+            }
+          }
+        ],
+        "SecurityGroups": [
+          {
+            "Fn::ImportValue": {
+              "Fn::Sub": "${Prefijo}-ALBSG"
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "Target": {
+      "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+      "Properties": {
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${Prefijo}-VPC"
+          }
+        },
+        "Protocol": "HTTP",
+        "Port": 8000,
+        "TargetType": "instance",
+        "HealthCheckPath": "/api/v1/salud",
+        "Matcher": {
+          "HttpCode": "200"
+        },
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "Listener": {
+      "Type": "AWS::ElasticLoadBalancingV2::Listener",
+      "Properties": {
+        "LoadBalancerArn": {
+          "Ref": "ALB"
+        },
+        "Port": 80,
+        "Protocol": "HTTP",
+        "DefaultActions": [
+          {
+            "Type": "forward",
+            "TargetGroupArn": {
+              "Ref": "Target"
+            }
+          }
+        ]
+      }
+    },
+    "LT": {
+      "Type": "AWS::EC2::LaunchTemplate",
+      "Properties": {
+        "LaunchTemplateData": {
+          "ImageId": {
+            "Ref": "AmiId"
+          },
+          "InstanceType": {
+            "Ref": "TipoInstancia"
+          },
+          "IamInstanceProfile": {
+            "Name": {
+              "Fn::ImportValue": {
+                "Fn::Sub": "${Prefijo}-InstanceProfile"
+              }
+            }
+          },
+          "SecurityGroupIds": [
+            {
+              "Fn::ImportValue": {
+                "Fn::Sub": "${Prefijo}-AppSG"
+              }
+            }
+          ],
+          "MetadataOptions": {
+            "HttpTokens": "required",
+            "HttpEndpoint": "enabled",
+            "HttpPutResponseHopLimit": 2
+          },
+          "BlockDeviceMappings": [
+            {
+              "DeviceName": "/dev/xvda",
+              "Ebs": {
+                "Encrypted": true,
+                "VolumeSize": 20,
+                "VolumeType": "gp3",
+                "DeleteOnTermination": true
+              }
+            }
+          ],
+          "UserData": {
+            "Fn::Base64": {
+              "Fn::Sub": "#!/bin/bash\nset -euxo pipefail\ndnf install -y docker amazon-cloudwatch-agent awscli unzip\nsystemctl enable --now docker\nmkdir -p /opt/ecoraee\naws s3 cp s3://${BucketArtefactos}/${ClaveArtefacto} /tmp/ecoraee.zip --region ${AWS::Region}\nunzip -q /tmp/ecoraee.zip -d /opt/ecoraee\ncd /opt/ecoraee\ncurl --fail --silent --show-error https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -o /opt/ecoraee/rds-ca.pem\ndocker build -f backend/Dockerfile -t ecoraee-api .\ncat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<'EOF'\n{\"agent\":{\"metrics_collection_interval\":60},\"metrics\":{\"namespace\":\"EcoRAEE\",\"append_dimensions\":{\"InstanceId\":\"${!aws:InstanceId}\"},\"metrics_collected\":{\"mem\":{\"measurement\":[\"mem_used_percent\"]},\"disk\":{\"measurement\":[\"used_percent\"],\"resources\":[\"/\"]}}}}\nEOF\n/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json\ndocker run -d --restart unless-stopped --name ecoraee-api -p 8000:8000 --log-driver awslogs --log-opt awslogs-region=${AWS::Region} --log-opt awslogs-group=${GrupoLogs} --log-opt awslogs-stream=api-$(curl -s http://169.254.169.254/latest/meta-data/instance-id || hostname) -v /opt/ecoraee/rds-ca.pem:/etc/ssl/rds-ca.pem:ro -e SSL_CERT_FILE=/etc/ssl/rds-ca.pem -e ENTORNO=produccion -e DEMO=false -e DB_SSL=true -e AUTH_MODO=${AuthModo} -e DB_SECRET_ARN=${SecretoServiciosArn} -e JWT_SECRET_ARN=${SecretoJwtArn} -e AWS_REGION=${AWS::Region} -e ALMACEN_MODO=s3 -e BUCKET_EVIDENCIAS=${BucketEvidencias} -e BUCKET_CONTENIDOS=${BucketContenidos} -e CORS_ORIGENES=${OrigenWeb} ecoraee-api uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*' --no-access-log\n"
+            }
+          },
+          "TagSpecifications": [
+            {
+              "ResourceType": "instance",
+              "Tags": [
+                {
+                  "Key": "Proyecto",
+                  "Value": "EcoRAEE"
+                },
+                {
+                  "Key": "Entorno",
+                  "Value": {
+                    "Ref": "Entorno"
+                  }
+                },
+                {
+                  "Key": "Responsable",
+                  "Value": {
+                    "Ref": "Responsable"
+                  }
+                }
+              ]
+            },
+            {
+              "ResourceType": "volume",
+              "Tags": [
+                {
+                  "Key": "Proyecto",
+                  "Value": "EcoRAEE"
+                },
+                {
+                  "Key": "Entorno",
+                  "Value": {
+                    "Ref": "Entorno"
+                  }
+                },
+                {
+                  "Key": "Responsable",
+                  "Value": {
+                    "Ref": "Responsable"
+                  }
+                }
+              ]
+            }
+          ],
+          "Monitoring": {
+            "Enabled": true
+          }
+        }
+      }
+    },
+    "ASG": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "DependsOn": [
+        "Listener",
+        "Logs"
+      ],
+      "Properties": {
+        "VPCZoneIdentifier": [
+          {
+            "Fn::ImportValue": {
+              "Fn::Sub": "${Prefijo}-App1"
+            }
+          },
+          {
+            "Fn::ImportValue": {
+              "Fn::Sub": "${Prefijo}-App2"
+            }
+          }
+        ],
+        "MinSize": "1",
+        "MaxSize": "2",
+        "DesiredCapacity": "1",
+        "HealthCheckType": "ELB",
+        "HealthCheckGracePeriod": 900,
+        "TargetGroupARNs": [
+          {
+            "Ref": "Target"
+          }
+        ],
+        "LaunchTemplate": {
+          "LaunchTemplateId": {
+            "Ref": "LT"
+          },
+          "Version": {
+            "Fn::GetAtt": [
+              "LT",
+              "LatestVersionNumber"
+            ]
+          }
+        },
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE",
+            "PropagateAtLaunch": true
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            },
+            "PropagateAtLaunch": true
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            },
+            "PropagateAtLaunch": true
+          }
+        ]
+      }
+    },
+    "Logs": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Ref": "GrupoLogs"
+        },
+        "RetentionInDays": 30,
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "ALBDNS": {
+      "Value": {
+        "Fn::GetAtt": [
+          "ALB",
+          "DNSName"
+        ]
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-ALBDNS"
+        }
+      }
+    },
+    "ALBFullName": {
+      "Value": {
+        "Fn::GetAtt": [
+          "ALB",
+          "LoadBalancerFullName"
+        ]
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-ALBFullName"
+        }
+      }
+    },
+    "TargetFullName": {
+      "Value": {
+        "Fn::GetAtt": [
+          "Target",
+          "TargetGroupFullName"
+        ]
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-TargetFullName"
+        }
+      }
+    },
+    "ASG": {
+      "Value": {
+        "Ref": "ASG"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-ASG"
+        }
+      }
+    }
+  }
+}

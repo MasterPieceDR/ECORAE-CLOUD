@@ -1,0 +1,12 @@
+flowchart LR
+  Infra[EcoRAEE-InfraAdmins] --> InfraOps[EcoRAEE-InfraOpsPolicy]
+  DB[EcoRAEE-DBAdmins] --> DBOps[DatabaseOpsPolicy]
+  App[EcoRAEE-AppAdmins] --> AppOps[AppsOpsPolicy]
+  Dev[EcoRAEE-Developers] --> Developer[DeveloperPolicy]
+  Mon[EcoRAEE-Monitoring] --> Audit[AuditReadPolicy]
+  App --> Evidence[S3EvidencePolicy opcional]
+  EC2[EcoRAEE-EC2RuntimeRole / LabRole] --> Runtime[RuntimeDataPolicy]
+  EC2 --> SSM[AmazonSSMManagedInstanceCore]
+  EC2 --> CW[CloudWatchAgentServerPolicy]
+  Runtime --> B[S3: dos buckets]
+  Runtime --> SM[Secrets Manager: dos secretos]

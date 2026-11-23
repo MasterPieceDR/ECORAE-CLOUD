@@ -1,0 +1,24 @@
+flowchart TB
+  U[Navegador HTTPS] --> CF[CloudFront]
+  CF -->|OAC| WEB[S3 frontend privado]
+  CF -->|/api/* sin caché| ALB
+  U -->|PUT/GET prefirmado| S3[S3 evidencias y contenidos]
+  subgraph VPC[VPC: dos zonas de disponibilidad]
+    subgraph AZ1[AZ 1]
+      P1[Subred pública: ALB y NAT opcional]
+      A1[Subred app privada: EC2 ASG]
+      D1[Subred datos privada: RDS]
+    end
+    subgraph AZ2[AZ 2]
+      P2[Subred pública: ALB]
+      A2[Subred app privada: EC2 ASG]
+      D2[Subred datos privada: RDS standby opcional]
+    end
+    ALB[ALB público] --- P1 & P2
+    ALB -->|8000| A1 & A2
+    A1 & A2 -->|5432| D1 & D2
+    EP[Endpoint S3 y endpoints de interfaz opcionales]
+    A1 & A2 --> EP
+  end
+  A1 & A2 --> SM[Secrets Manager y Session Manager]
+  A1 & A2 --> CW[CloudWatch]

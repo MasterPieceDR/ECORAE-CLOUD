@@ -1,0 +1,318 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "EcoRAEE - 03-datos",
+  "Parameters": {
+    "Prefijo": {
+      "Type": "String",
+      "Default": "ecoraee-lab"
+    },
+    "Entorno": {
+      "Type": "String",
+      "Default": "lab"
+    },
+    "Responsable": {
+      "Type": "String"
+    },
+    "ClaseDB": {
+      "Type": "String",
+      "Default": "db.t4g.micro"
+    },
+    "MultiAZ": {
+      "Type": "String",
+      "Default": "false",
+      "AllowedValues": [
+        "true",
+        "false"
+      ]
+    },
+    "VersionPostgres": {
+      "Type": "String",
+      "Default": "16.11"
+    }
+  },
+  "Resources": {
+    "Subnets": {
+      "Type": "AWS::RDS::DBSubnetGroup",
+      "Properties": {
+        "DBSubnetGroupDescription": "Datos en dos AZ",
+        "SubnetIds": [
+          {
+            "Fn::ImportValue": {
+              "Fn::Sub": "${Prefijo}-Datos1"
+            }
+          },
+          {
+            "Fn::ImportValue": {
+              "Fn::Sub": "${Prefijo}-Datos2"
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "DB": {
+      "Type": "AWS::RDS::DBInstance",
+      "DeletionPolicy": "Snapshot",
+      "UpdateReplacePolicy": "Snapshot",
+      "Properties": {
+        "Engine": "postgres",
+        "EngineVersion": {
+          "Ref": "VersionPostgres"
+        },
+        "DBInstanceClass": {
+          "Ref": "ClaseDB"
+        },
+        "AllocatedStorage": "20",
+        "StorageType": "gp3",
+        "StorageEncrypted": true,
+        "DBName": "ecoraee",
+        "MasterUsername": "ecoraee_admin",
+        "ManageMasterUserPassword": true,
+        "BackupRetentionPeriod": 7,
+        "EnableCloudwatchLogsExports": [
+          "postgresql",
+          "upgrade"
+        ],
+        "MultiAZ": {
+          "Fn::If": [
+            "EsMultiAZ",
+            true,
+            false
+          ]
+        },
+        "PubliclyAccessible": false,
+        "DBSubnetGroupName": {
+          "Ref": "Subnets"
+        },
+        "VPCSecurityGroups": [
+          {
+            "Fn::ImportValue": {
+              "Fn::Sub": "${Prefijo}-DBSG"
+            }
+          }
+        ],
+        "DeletionProtection": false,
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "ApiSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "GenerateSecretString": {
+          "SecretStringTemplate": "{\"username\":\"ecoraee_api_svc\"}",
+          "GenerateStringKey": "password",
+          "PasswordLength": 40,
+          "ExcludePunctuation": true
+        },
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "McpSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "GenerateSecretString": {
+          "SecretStringTemplate": "{\"username\":\"ecoraee_mcp_svc\"}",
+          "GenerateStringKey": "password",
+          "PasswordLength": 40,
+          "ExcludePunctuation": true
+        },
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "JwtSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "GenerateSecretString": {
+          "PasswordLength": 48,
+          "ExcludePunctuation": true
+        },
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ],
+        "Name": {
+          "Fn::Sub": "${Prefijo}/jwt"
+        }
+      }
+    },
+    "ServiceSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "SecretString": {
+          "Fn::Sub": "{\"host\":\"${DB.Endpoint.Address}\",\"port\":5432,\"dbname\":\"ecoraee\",\"api\":{\"username\":\"ecoraee_api_svc\",\"password\":\"{{resolve:secretsmanager:${ApiSecret}:SecretString:password}}\"},\"mcp\":{\"username\":\"ecoraee_mcp_svc\",\"password\":\"{{resolve:secretsmanager:${McpSecret}:SecretString:password}}\"}}"
+        },
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ],
+        "Name": {
+          "Fn::Sub": "${Prefijo}/servicios"
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "DB": {
+      "Value": {
+        "Ref": "DB"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-DB"
+        }
+      }
+    },
+    "ServiceSecret": {
+      "Value": {
+        "Ref": "ServiceSecret"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-ServiceSecret"
+        }
+      }
+    },
+    "JwtSecret": {
+      "Value": {
+        "Ref": "JwtSecret"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-JwtSecret"
+        }
+      }
+    },
+    "DBHost": {
+      "Value": {
+        "Fn::GetAtt": [
+          "DB",
+          "Endpoint.Address"
+        ]
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-DBHost"
+        }
+      }
+    },
+    "MasterSecret": {
+      "Value": {
+        "Fn::GetAtt": [
+          "DB",
+          "MasterUserSecret.SecretArn"
+        ]
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-MasterSecret"
+        }
+      }
+    }
+  },
+  "Conditions": {
+    "EsMultiAZ": {
+      "Fn::Equals": [
+        {
+          "Ref": "MultiAZ"
+        },
+        "true"
+      ]
+    }
+  }
+}

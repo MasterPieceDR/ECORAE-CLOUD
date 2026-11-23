@@ -1,0 +1,19 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "autoscaling:Describe*",
+        "ec2:DescribeInstances",
+        "elasticloadbalancing:Describe*",
+        "cloudfront:GetDistribution",
+        "cloudfront:CreateInvalidation",
+        "cloudfront:GetInvalidation"
+      ],
+      "Resource": [
+        "*"
+      ]
+    }
+  ]
+}

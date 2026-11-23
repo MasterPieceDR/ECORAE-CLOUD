@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:DescribeStacks",
+        "cloudformation:DescribeStackEvents",
+        "cloudformation:GetTemplate",
+        "cloudformation:ListStacks",
+        "ec2:Describe*",
+        "elasticloadbalancing:Describe*",
+        "autoscaling:Describe*",
+        "cloudfront:GetDistribution",
+        "cloudfront:ListDistributions"
+      ],
+      "Resource": [
+        "*"
+      ]
+    }
+  ]
+}

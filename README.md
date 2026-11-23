@@ -181,3 +181,8 @@ sessionStorage.getItem('ecoraee:token')   // en la consola del navegador
 
 Luego configura el cliente MCP con el servidor `http://localhost:8001/mcp` y la cabecera
 `Authorization: Bearer <token>`. El cliente verá solo las herramientas de tu rol.
+
+
+## Despliegue en AWS
+
+La preparación para laboratorio está en [infrastructure/](infrastructure/README.md): siete stacks CloudFormation, IAM y scripts de migración y publicación. [La guía](docs/aws/GUIA_DESPLIEGUE.md) describe la secuencia y la evidencia propuesta; [costos](docs/aws/costos.md) contiene una estimación. El despliegue usa dos AZ, EC2 privada y RDS, y requiere completar parámetros, permisos y la inicialización de la base. `docker-compose.aws.yml` ofrece ejecución de API/MCP contra servicios AWS; copiar `.env.aws.example` a `.env.aws` y aportar solo identificadores, nunca credenciales. Los diagramas están en `docs/aws/`, las decisiones en `docs/adr/` y los índices provisionales en `innovation/` y `evidence/`.

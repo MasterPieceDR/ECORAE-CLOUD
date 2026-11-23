@@ -1,0 +1,289 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "EcoRAEE - 04-almacenamiento",
+  "Parameters": {
+    "Prefijo": {
+      "Type": "String",
+      "Default": "ecoraee-lab"
+    },
+    "Entorno": {
+      "Type": "String",
+      "Default": "lab"
+    },
+    "Responsable": {
+      "Type": "String"
+    },
+    "BucketFrontend": {
+      "Type": "String"
+    },
+    "BucketEvidencias": {
+      "Type": "String"
+    },
+    "BucketContenidos": {
+      "Type": "String"
+    },
+    "OrigenWeb": {
+      "Type": "String"
+    }
+  },
+  "Resources": {
+    "WebBucket": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "BucketName": {
+          "Ref": "BucketFrontend"
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "Id": "VersionesAntiguas",
+              "Status": "Enabled",
+              "NoncurrentVersionExpiration": {
+                "NoncurrentDays": 90
+              },
+              "AbortIncompleteMultipartUpload": {
+                "DaysAfterInitiation": 7
+              }
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "EvidenceBucket": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "BucketName": {
+          "Ref": "BucketEvidencias"
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "Id": "VersionesAntiguas",
+              "Status": "Enabled",
+              "NoncurrentVersionExpiration": {
+                "NoncurrentDays": 90
+              },
+              "AbortIncompleteMultipartUpload": {
+                "DaysAfterInitiation": 7
+              }
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ],
+        "CorsConfiguration": {
+          "CorsRules": [
+            {
+              "AllowedOrigins": [
+                {
+                  "Ref": "OrigenWeb"
+                }
+              ],
+              "AllowedMethods": [
+                "GET",
+                "PUT",
+                "HEAD"
+              ],
+              "AllowedHeaders": [
+                "*"
+              ],
+              "ExposedHeaders": [
+                "ETag"
+              ],
+              "MaxAge": 3600
+            }
+          ]
+        }
+      }
+    },
+    "ContentBucket": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "BucketName": {
+          "Ref": "BucketContenidos"
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "Id": "VersionesAntiguas",
+              "Status": "Enabled",
+              "NoncurrentVersionExpiration": {
+                "NoncurrentDays": 90
+              },
+              "AbortIncompleteMultipartUpload": {
+                "DaysAfterInitiation": 7
+              }
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ],
+        "CorsConfiguration": {
+          "CorsRules": [
+            {
+              "AllowedOrigins": [
+                {
+                  "Ref": "OrigenWeb"
+                }
+              ],
+              "AllowedMethods": [
+                "GET",
+                "PUT",
+                "HEAD"
+              ],
+              "AllowedHeaders": [
+                "*"
+              ],
+              "ExposedHeaders": [
+                "ETag"
+              ],
+              "MaxAge": 3600
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "BucketFrontend": {
+      "Value": {
+        "Ref": "WebBucket"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-BucketFrontend"
+        }
+      }
+    },
+    "BucketEvidencias": {
+      "Value": {
+        "Ref": "EvidenceBucket"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-BucketEvidencias"
+        }
+      }
+    },
+    "BucketContenidos": {
+      "Value": {
+        "Ref": "ContentBucket"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-BucketContenidos"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,821 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "EcoRAEE - 01-red",
+  "Parameters": {
+    "Prefijo": {
+      "Type": "String",
+      "Default": "ecoraee-lab"
+    },
+    "Entorno": {
+      "Type": "String",
+      "Default": "lab"
+    },
+    "Responsable": {
+      "Type": "String"
+    },
+    "CrearNAT": {
+      "Type": "String",
+      "Default": "true",
+      "AllowedValues": [
+        "true",
+        "false"
+      ]
+    },
+    "CrearEndpoints": {
+      "Type": "String",
+      "Default": "false",
+      "AllowedValues": [
+        "true",
+        "false"
+      ]
+    }
+  },
+  "Resources": {
+    "VPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.42.0.0/16",
+        "EnableDnsHostnames": true,
+        "EnableDnsSupport": true,
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "IGW": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "Attach": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "InternetGatewayId": {
+          "Ref": "IGW"
+        }
+      }
+    },
+    "PublicRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "DefaultRoute": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn": "Attach",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PublicRouteTable"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "IGW"
+        }
+      }
+    },
+    "PrivateRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "DataRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "EIP": {
+      "Type": "AWS::EC2::EIP",
+      "Condition": "HayNat",
+      "DependsOn": "Attach",
+      "Properties": {
+        "Domain": "vpc",
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "NAT": {
+      "Type": "AWS::EC2::NatGateway",
+      "Condition": "HayNat",
+      "Properties": {
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "EIP",
+            "AllocationId"
+          ]
+        },
+        "SubnetId": {
+          "Ref": "Publica1"
+        },
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "PrivateRoute": {
+      "Type": "AWS::EC2::Route",
+      "Condition": "HayNat",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PrivateRouteTable"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "NatGatewayId": {
+          "Ref": "NAT"
+        }
+      }
+    },
+    "S3Endpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.s3"
+        },
+        "VpcEndpointType": "Gateway",
+        "RouteTableIds": [
+          {
+            "Ref": "PrivateRouteTable"
+          },
+          {
+            "Ref": "DataRouteTable"
+          }
+        ]
+      }
+    },
+    "EndpointSG": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Condition": "HayEndpoints",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "GroupDescription": "HTTPS desde VPC a endpoints",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "10.42.0.0/16"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "Publica1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "AvailabilityZone": {
+          "Fn::Select": [
+            0,
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        },
+        "CidrBlock": "10.42.1.0/24",
+        "MapPublicIpOnLaunch": false,
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "Publica1Association": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "Publica1"
+        },
+        "RouteTableId": {
+          "Ref": "PublicRouteTable"
+        }
+      }
+    },
+    "Publica2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "AvailabilityZone": {
+          "Fn::Select": [
+            1,
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        },
+        "CidrBlock": "10.42.2.0/24",
+        "MapPublicIpOnLaunch": false,
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "Publica2Association": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "Publica2"
+        },
+        "RouteTableId": {
+          "Ref": "PublicRouteTable"
+        }
+      }
+    },
+    "App1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "AvailabilityZone": {
+          "Fn::Select": [
+            0,
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        },
+        "CidrBlock": "10.42.11.0/24",
+        "MapPublicIpOnLaunch": false,
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "App1Association": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "App1"
+        },
+        "RouteTableId": {
+          "Ref": "PrivateRouteTable"
+        }
+      }
+    },
+    "App2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "AvailabilityZone": {
+          "Fn::Select": [
+            1,
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        },
+        "CidrBlock": "10.42.12.0/24",
+        "MapPublicIpOnLaunch": false,
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "App2Association": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "App2"
+        },
+        "RouteTableId": {
+          "Ref": "PrivateRouteTable"
+        }
+      }
+    },
+    "Datos1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "AvailabilityZone": {
+          "Fn::Select": [
+            0,
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        },
+        "CidrBlock": "10.42.21.0/24",
+        "MapPublicIpOnLaunch": false,
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "Datos1Association": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "Datos1"
+        },
+        "RouteTableId": {
+          "Ref": "DataRouteTable"
+        }
+      }
+    },
+    "Datos2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "AvailabilityZone": {
+          "Fn::Select": [
+            1,
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        },
+        "CidrBlock": "10.42.22.0/24",
+        "MapPublicIpOnLaunch": false,
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "Datos2Association": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "Datos2"
+        },
+        "RouteTableId": {
+          "Ref": "DataRouteTable"
+        }
+      }
+    },
+    "EPssm": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Condition": "HayEndpoints",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.ssm"
+        },
+        "VpcEndpointType": "Interface",
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "App1"
+          },
+          {
+            "Ref": "App2"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "EndpointSG"
+          }
+        ]
+      }
+    },
+    "EPssmmessages": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Condition": "HayEndpoints",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.ssmmessages"
+        },
+        "VpcEndpointType": "Interface",
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "App1"
+          },
+          {
+            "Ref": "App2"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "EndpointSG"
+          }
+        ]
+      }
+    },
+    "EPec2messages": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Condition": "HayEndpoints",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.ec2messages"
+        },
+        "VpcEndpointType": "Interface",
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "App1"
+          },
+          {
+            "Ref": "App2"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "EndpointSG"
+          }
+        ]
+      }
+    },
+    "EPsecretsmanager": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Condition": "HayEndpoints",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.secretsmanager"
+        },
+        "VpcEndpointType": "Interface",
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "App1"
+          },
+          {
+            "Ref": "App2"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "EndpointSG"
+          }
+        ]
+      }
+    },
+    "EPlogs": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Condition": "HayEndpoints",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.logs"
+        },
+        "VpcEndpointType": "Interface",
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "App1"
+          },
+          {
+            "Ref": "App2"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "EndpointSG"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "VPC": {
+      "Value": {
+        "Ref": "VPC"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-VPC"
+        }
+      }
+    },
+    "Publica1": {
+      "Value": {
+        "Ref": "Publica1"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-Publica1"
+        }
+      }
+    },
+    "Publica2": {
+      "Value": {
+        "Ref": "Publica2"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-Publica2"
+        }
+      }
+    },
+    "App1": {
+      "Value": {
+        "Ref": "App1"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-App1"
+        }
+      }
+    },
+    "App2": {
+      "Value": {
+        "Ref": "App2"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-App2"
+        }
+      }
+    },
+    "Datos1": {
+      "Value": {
+        "Ref": "Datos1"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-Datos1"
+        }
+      }
+    },
+    "Datos2": {
+      "Value": {
+        "Ref": "Datos2"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-Datos2"
+        }
+      }
+    }
+  },
+  "Conditions": {
+    "HayNat": {
+      "Fn::Equals": [
+        {
+          "Ref": "CrearNAT"
+        },
+        "true"
+      ]
+    },
+    "HayEndpoints": {
+      "Fn::Equals": [
+        {
+          "Ref": "CrearEndpoints"
+        },
+        "true"
+      ]
+    }
+  }
+}
