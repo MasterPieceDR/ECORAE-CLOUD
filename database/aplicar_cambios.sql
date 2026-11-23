@@ -4,7 +4,8 @@ SELECT to_regclass('seg.solicitud_rol') IS NULL AS falta13,
        to_regprocedure('api.fn_anular_objeto(uuid,text)') IS NULL AS falta14,
        to_regprocedure('api.fn_verificar_base()') IS NULL AS falta15,
        to_regprocedure('seg.fn_cache_valida(bigint)') IS NULL AS falta16,
-       to_regprocedure('api.fn_reabrir_modelo(uuid,text)') IS NULL AS falta17 \gset
+       to_regprocedure('api.fn_reabrir_modelo(uuid,text)') IS NULL AS falta17,
+       to_regprocedure('api.fn_asignar_imagen_modelo(uuid,text)') IS NULL AS falta17b \gset
 \if :falta13
   \echo 'Aplicando 13_mejoras.sql (editor de escenarios y solicitudes de rol)...'
   BEGIN;
@@ -33,6 +34,12 @@ SELECT to_regclass('seg.solicitud_rol') IS NULL AS falta13,
   \echo 'Aplicando 17_catalogo_serie_imagenes.sql (catálogo, series e imágenes)...'
   BEGIN;
   \i /database/17_catalogo_serie_imagenes.sql
+  COMMIT;
+\endif
+\if :falta17b
+  \echo 'Aplicando 17b_api_catalogo.sql (imágenes y disponibilidad de serie)...'
+  BEGIN;
+  \i /database/17b_api_catalogo.sql
   COMMIT;
 \endif
 \echo 'La base está al día.'

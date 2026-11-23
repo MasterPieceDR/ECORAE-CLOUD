@@ -57,8 +57,10 @@ async def manejar_postgres(request: Request, exc: asyncpg.PostgresError):
     m = re.match(r"Acceso denegado: el usuario \d+ no tiene el permiso (\S+)\s*(?:en el centro (\d+))?", mensaje or "")
     if m:                                             # sin ids internos en la respuesta
         mensaje = f"Tu rol no tiene el permiso {m.group(1)}" + (" en ese centro" if m.group(2) else "") + "."
-    if generico and not estado_sql.startswith("EC"):
-        restriccion = getattr(exc, "constraint_name", None)
+    restriccion = getattr(exc, "constraint_name", None)
+    # La regla de serie suele emitir EC409; si llega el índice directamente,
+    # también se conserva el mensaje de PostgreSQL y se responde con 409.
+    if generico and not estado_sql.startswith("EC") and restriccion != "ux_dispositivo_serie_ecosistema":
         mensaje = generico + (f" ({restriccion})" if restriccion else "")
     return _respuesta(request, estado, mensaje, estado_sql)
 

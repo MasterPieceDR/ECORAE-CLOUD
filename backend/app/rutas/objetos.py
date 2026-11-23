@@ -1,15 +1,25 @@
 """Objetos trazables (dispositivos y lotes): listado, ficha completa, registro, lotes y bandeja de tareas."""
 from __future__ import annotations
 
+import re
+
 import asyncpg
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
-from .. import acciones, db
+from .. import acciones, almacen, db
 from ..errores import ErrorAPI
 from ..seguridad import Perfil, Sesion, perfil, sesion
 
 router = APIRouter(tags=["Trazabilidad"])
+
+# Debe coincidir con la expresión de trz.fn_normalizar_serie en el script 17.
+FORMATO_SERIE = re.compile(r"^[A-Z0-9][A-Z0-9./-]{3,39}$")
+
+
+def normalizar_serie(serie: str) -> str:
+    return serie.strip(" ").upper()
+
 
 PREFIJO = {"PORTATIL": "LAP", "ESCRITORIO": "ESC", "MONITOR": "MON", "CELULAR": "CEL", "TABLET": "TAB", "IMPRESORA": "IMP",
            "EQUIPO_RED": "RTR", "BATERIA": "BAT", "DISCO": "DSK", "PLACA": "PLC", "PEQ_ELECTRO": "PEQ"}
@@ -32,18 +42,19 @@ async def operativo(conn, codigo: str) -> dict:
 
 @router.get("/objetos")
 async def listar(q: str | None = None, estado: str | None = None, clasificacion: str | None = None, tipo: str | None = None,
-                 centro: str | None = None, con_tareas: bool = False, limite: int = Query(100, le=500), desde: int = 0,
+                 centro: str | None = None, serie: str | None = None, con_tareas: bool = False, limite: int = Query(100, le=500), desde: int = 0,
                  s: Sesion = Depends(sesion)):
     async with s.tx() as conn:
         termino = f"%{q.strip()}%" if q and q.strip() else None
         rows = db.filas(await conn.fetch("""
             SELECT * FROM api.v1_objeto_operativo
              WHERE ($1::text IS NULL OR codigo ILIKE $1 OR categoria_nombre ILIKE $1 OR marca ILIKE $1 OR lote_codigo ILIKE $1
-                    OR organizacion_origen_nombre ILIKE $1)
+                    OR organizacion_origen_nombre ILIKE $1 OR numero_serie ILIKE $1)
                AND ($2::text IS NULL OR estado = $2) AND ($3::text IS NULL OR clasificacion = $3)
                AND ($4::text IS NULL OR tipo_objeto = $4) AND ($5::text IS NULL OR centro_actual = $5)
+               AND ($8::text IS NULL OR numero_serie = $8)
              ORDER BY ultimo_movimiento DESC NULLS LAST, codigo LIMIT $6 OFFSET $7""",
-            termino, estado, clasificacion, tipo, centro, limite, desde))
+            termino, estado, clasificacion, tipo, centro, limite, desde, normalizar_serie(serie) if serie is not None else None))
         cx = await contexto(conn)
         for r in rows:
             calc = acciones.calcular(r, cx)["acciones"]
@@ -72,6 +83,41 @@ async def tareas(s: Sesion = Depends(sesion)):
                                  "categoria_nombre": r["categoria_nombre"], "centro_actual": r["centro_actual"],
                                  "ultimo_movimiento": r["ultimo_movimiento"]})
     return {"total": sum(len(g["objetos"]) for g in grupos.values()), "grupos": list(grupos.values())}
+
+
+@router.get("/objetos/serie-disponible")
+async def serie_disponible(serie: str, excluir: str | None = None, s: Sesion = Depends(sesion)):
+    normalizada = normalizar_serie(serie)
+    if not FORMATO_SERIE.fullmatch(normalizada):
+        return {"disponible": False, "valida": False, "normalizada": normalizada,
+                "mensaje": "La serie debe tener de 4 a 40 letras, números, puntos, guiones o barras y comenzar por letra o número."}
+    async with s.tx() as conn:
+        disponible = await conn.fetchval("SELECT api.fn_serie_disponible($1, $2::uuid)", normalizada, excluir)
+    return {"disponible": disponible, "valida": True, "normalizada": normalizada,
+            "mensaje": "Serie disponible" if disponible else "La serie ya está registrada en el ecosistema"}
+
+
+@router.get("/objetos/serie/{serie:path}")
+async def buscar_serie(serie: str, s: Sesion = Depends(sesion)):
+    async with s.tx() as conn:
+        codigo = await conn.fetchval("SELECT codigo FROM api.v1_objeto_operativo WHERE numero_serie = $1 AND estado <> 'ANULADO'", normalizar_serie(serie))
+    if not codigo:
+        raise ErrorAPI(404, "No existe un equipo visible con esa serie", "EC404")
+    return await ficha(codigo, s)
+
+
+@router.get("/objetos/{codigo}/fotos")
+async def fotos(codigo: str, s: Sesion = Depends(sesion)):
+    resultado = []
+    async with s.tx() as conn:
+        await operativo(conn, codigo)
+        filas = await conn.fetch("""SELECT DISTINCT uid, mime, tamano_bytes AS tamano, subido_en, subido_por
+            FROM api.v1_evidencia WHERE tipo = 'FOTO_EQUIPO' AND objeto = $1 ORDER BY subido_en, uid""", codigo)
+        for fila in filas:
+            acceso = await conn.fetchval("SELECT api.fn_obtener_evidencia($1::uuid, 'TRAZABILIDAD')", fila["uid"])
+            if acceso["permitido"]:
+                resultado.append({**dict(fila), "url": almacen.actual().url_descarga(acceso["bucket"], acceso["clave"], 300)})
+    return resultado
 
 
 @router.get("/objetos/{codigo}")
@@ -116,7 +162,8 @@ class DispositivoIn(BaseModel):
     peso_kg: float = Field(gt=0, le=2000)
     contiene_almacenamiento: bool = False
     marca: str | None = None
-    modelo: str | None = None
+    modelo: str | None = Field(None, max_length=120)
+    modelo_uid: str | None = None
     numero_serie: str | None = Field(None, max_length=80)
     anio: int | None = Field(None, ge=1970, le=2100)
     atributos: dict = Field(default_factory=dict)
@@ -136,9 +183,9 @@ async def registrar(d: DispositivoIn, s: Sesion = Depends(sesion)):
                     codigo = f"{pref}-{n}"
                 uid = await conn.fetchval("""SELECT api.fn_registrar_dispositivo(p_codigo => $1, p_categoria => $2, p_peso_kg => $3,
                          p_contiene_almacenamiento => $4, p_marca => $5, p_modelo => $6, p_numero_serie => $7, p_anio => $8,
-                         p_atributos => $9::jsonb, p_organizacion_origen => $10::uuid)""",
+                         p_atributos => $9::jsonb, p_organizacion_origen => $10::uuid, p_modelo_uid => $11::uuid)""",
                                           codigo, d.categoria, d.peso_kg, d.contiene_almacenamiento, d.marca, d.modelo,
-                                          d.numero_serie or None, d.anio, d.atributos, d.organizacion_origen)
+                                          d.numero_serie or None, d.anio, d.atributos, d.organizacion_origen, d.modelo_uid)
             return {"uid": uid, "codigo": codigo}
         except asyncpg.UniqueViolationError as e:
             if d.codigo or "codigo" not in (getattr(e, "constraint_name", "") or ""):
@@ -151,6 +198,7 @@ class DispositivoUpd(BaseModel):
     contiene_almacenamiento: bool = False
     marca: str | None = None
     modelo: str | None = Field(None, max_length=120)
+    modelo_uid: str | None = None
     numero_serie: str | None = Field(None, max_length=80)
     anio: int | None = Field(None, ge=1970, le=2100)
     atributos: dict = Field(default_factory=dict)
@@ -165,8 +213,8 @@ class AnularIn(BaseModel):
 async def actualizar(uid: str, d: DispositivoUpd, s: Sesion = Depends(sesion)):
     """UPDATE del CRUD: corrige los datos mientras el equipo está REGISTRADO (la base lo valida)."""
     async with s.tx() as conn:
-        await conn.execute("SELECT api.fn_actualizar_dispositivo($1::uuid, $2, $3, $4, $5, $6, $7, $8::jsonb, $9)", uid, d.peso_kg,
-                           d.contiene_almacenamiento, d.marca or None, d.modelo or None, d.numero_serie, d.anio, d.atributos, d.motivo)
+        await conn.execute("SELECT api.fn_actualizar_dispositivo($1::uuid, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10::uuid)", uid, d.peso_kg,
+                           d.contiene_almacenamiento, d.marca or None, d.modelo or None, d.numero_serie, d.anio, d.atributos, d.motivo, d.modelo_uid)
     return {"ok": True}
 
 

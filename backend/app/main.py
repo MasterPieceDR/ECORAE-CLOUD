@@ -15,7 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import db, errores
 from .config import config
-from .rutas import asistente, auth, capacitacion, documentos, evidencias, general, gobierno, objetos, red, verificacion
+from .rutas import asistente, auth, capacitacion, catalogo, documentos, evidencias, general, gobierno, objetos, red, verificacion
 
 
 class _JSON(logging.Formatter):
@@ -76,6 +76,6 @@ app.add_exception_handler(RequestValidationError, errores.manejar_validacion)
 app.add_exception_handler(StarletteHTTPException, errores.manejar_http)
 app.add_exception_handler(Exception, errores.manejar_inesperado)
 
-for r in (general.router, auth.router, objetos.router, documentos.router, evidencias.router, red.router,
+for r in (general.router, auth.router, catalogo.router, objetos.router, documentos.router, evidencias.router, red.router,
           capacitacion.router, gobierno.router, asistente.router, verificacion.router):
     app.include_router(r, prefix="/api/v1")

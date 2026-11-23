@@ -94,3 +94,123 @@ async def test_catalogo_serie_y_fotos_en_base(cliente):
             await conn.fetchval("SELECT api.fn_registrar_dispositivo($1, 'MONITOR', 3, false, NULL, NULL, $2, 2020, '{\"pulgadas\":20}'::jsonb)", f"REU-{sufijo}", f"AB-{sufijo}")
         finally:
             await tx.rollback()
+
+
+def imagen_prueba(formato="PNG", color=(23, 87, 149)):
+    salida = io.BytesIO()
+    Image.new("RGB", (8, 8), color).save(salida, formato)
+    return salida.getvalue()
+
+
+async def subir_imagen_modelo(actor, uid, datos, mime="image/png"):
+    r = await actor.post(f"/catalogo/modelos/{uid}/imagen/subida", {"mime": mime, "tamano": len(datos)})
+    assert r.status_code == 200, r.text
+    subida = r.json()
+    r = await actor.c.put(subida["url"].removeprefix("/api/v1"), content=datos, headers=subida["cabeceras"])
+    assert r.status_code == 200, r.text
+    return await actor.put(f"/catalogo/modelos/{uid}/imagen", {"clave": subida["clave"], "sha256": hashlib.sha256(datos).hexdigest(),
+                                                                "mime": mime, "tamano": len(datos)})
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_fase2_catalogo_modelos_y_regla_24h(actores):
+    import os
+    from uuid import uuid4
+    import psycopg2
+
+    coord, gen, admin = (actores[x] for x in ("coordinador", "gen.universidad", "admin"))
+    nombre = f"Modelo prueba {uuid4().hex[:8]}"
+    datos = {"categoria": "MONITOR", "marca": "LG", "nombre": nombre, "anio": 2020, "peso": 3.5}
+    assert (await gen.post("/catalogo/modelos", datos)).status_code == 403
+    r = await coord.post("/catalogo/modelos", datos)
+    assert r.status_code == 201, r.text
+    uid = r.json()["uid"]
+    lista = await gen.get("/catalogo/modelos", params={"categoria": "MONITOR", "marca": "LG", "q": nombre})
+    assert lista.status_code == 200 and any(m["uid"] == uid and m["editable"] for m in lista.json())
+    cambio = {"nombre": nombre + " editado", "anio": 2021, "peso": 4, "activo": True}
+    assert (await coord.put(f"/catalogo/modelos/{uid}", cambio)).status_code == 200
+    imagen = imagen_prueba()
+    r = await subir_imagen_modelo(coord, uid, imagen)
+    assert r.status_code == 200, r.text
+    r = await gen.get(f"/catalogo/modelos/{uid}/imagen")
+    assert r.status_code == 200 and r.json()["expira_en"] == 300
+    descarga = await gen.c.get(r.json()["url"].removeprefix("/api/v1"))
+    assert descarga.status_code == 200 and descarga.content == imagen
+    assert (await gen.post(f"/catalogo/modelos/{uid}/imagen/subida", {"mime": "image/png", "tamano": len(imagen)})).status_code == 403
+
+    with psycopg2.connect(dbname=os.getenv("DB_NOMBRE", "ecoraee"), host=os.getenv("PGHOST", "localhost"),
+                          user=os.getenv("PGUSER", "ecoraee_admin"), password=os.getenv("PGPASSWORD")) as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE cat.modelo_equipo SET editable_hasta = now() - interval '1 hour' WHERE uid = %s", (uid,))
+    r = await coord.put(f"/catalogo/modelos/{uid}", cambio)
+    assert r.status_code == 409 and "bloqueado" in r.json()["detail"]
+    assert (await coord.post(f"/catalogo/modelos/{uid}/imagen/subida", {"mime": "image/png", "tamano": len(imagen)})).status_code == 409
+    assert (await coord.post(f"/catalogo/modelos/{uid}/reabrir", {"motivo": "Corregir datos"})).status_code == 403
+    assert (await admin.post(f"/catalogo/modelos/{uid}/reabrir", {"motivo": "Corregir datos"})).status_code == 200
+    assert (await coord.put(f"/catalogo/modelos/{uid}", cambio)).status_code == 200
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_fase2_objetos_modelo_serie_y_fotos(actores):
+    from uuid import uuid4
+
+    gen, otro, coord = (actores[x] for x in ("gen.universidad", "gen.municipio", "coordinador"))
+    sufijo = uuid4().hex[:10].upper()
+    r = await coord.post("/catalogo/modelos", {"categoria": "MONITOR", "marca": "LG", "nombre": f"Monitor {sufijo}", "anio": 2020, "peso": 3})
+    assert r.status_code == 201, r.text
+    modelo = r.json()["uid"]
+    base = {"categoria": "MONITOR", "peso_kg": 3, "atributos": {"pulgadas": 22}}
+    assert (await gen.post("/objetos/dispositivos", {"categoria": "CELULAR", "peso_kg": 1, "modelo_uid": modelo, "numero_serie": f"BAD-{sufijo}"})).status_code == 422
+    assert (await gen.post("/objetos/dispositivos", {**base, "marca": "HP", "modelo_uid": modelo})).status_code == 422
+    assert (await gen.post("/objetos/dispositivos", {**base, "numero_serie": "abc?"})).status_code == 422
+    assert (await gen.post("/objetos/dispositivos", {"categoria": "CELULAR", "peso_kg": 1})).status_code == 422
+    serie = f"F2/{sufijo}"
+    r = await gen.post("/objetos/dispositivos", {**base, "modelo_uid": modelo, "numero_serie": f"  {serie.lower()}  "})
+    assert r.status_code == 201, r.text
+    codigo, uid = r.json()["codigo"], r.json()["uid"]
+    ficha = (await gen.get(f"/objetos/{codigo}")).json()
+    assert ficha["dispositivo"]["modelo_uid"] == modelo and ficha["dispositivo"]["numero_serie"] == serie
+    assert ficha["dispositivo"]["marca"] == "LG"
+    duplicado = await gen.post("/objetos/dispositivos", {**base, "numero_serie": serie.lower()})
+    assert duplicado.status_code == 409 and serie in duplicado.json()["detail"] and codigo in duplicado.json()["detail"]
+    assert any(x["codigo"] == codigo for x in (await gen.get("/objetos", params={"q": serie})).json()["objetos"])
+    assert any(x["codigo"] == codigo for x in (await gen.get("/objetos", params={"serie": serie.lower()})).json()["objetos"])
+    assert (await gen.get(f"/objetos/serie/{serie.lower()}")).json()["objeto"]["codigo"] == codigo
+    assert (await otro.get(f"/objetos/serie/{serie}")).status_code == 404
+    disponible = (await otro.get("/objetos/serie-disponible", params={"serie": serie})).json()
+    assert disponible["valida"] and not disponible["disponible"]
+    assert (await gen.get("/objetos/serie-disponible", params={"serie": serie, "excluir": uid})).json()["disponible"]
+    assert not (await gen.get("/objetos/serie-disponible", params={"serie": "?"})).json()["valida"]
+    libre = await gen.post("/objetos/dispositivos", {**base, "modelo": f"Modelo libre {sufijo}"})
+    assert libre.status_code == 201, libre.text
+    ficha = (await gen.get(f"/objetos/{libre.json()['codigo']}")).json()
+    assert ficha["dispositivo"]["modelo"] == f"Modelo libre {sufijo}" and not ficha["dispositivo"]["modelo_en_catalogo"]
+    cambio = {"peso_kg": 3, "modelo_uid": modelo, "numero_serie": serie, "atributos": {"pulgadas": 22}, "motivo": "Corregir modelo"}
+    assert (await gen.put(f"/objetos/dispositivos/{uid}", cambio)).status_code == 200
+
+    for i in range(5):
+        formato, mime = ("WEBP", "image/webp") if i == 1 else ("PNG", "image/png")
+        await gen.evidencia("FOTO_EQUIPO", mime, imagen_prueba(formato, (i * 30, 100, 120)), uid)
+    datos = imagen_prueba("PNG", (200, 50, 40))
+    r = await gen.post("/evidencias/subida", {"tipo": "FOTO_EQUIPO", "mime": "image/png", "tamano": len(datos)})
+    subida = r.json()
+    await gen.c.put(subida["url"].removeprefix("/api/v1"), content=datos, headers=subida["cabeceras"])
+    r = await gen.post("/evidencias", {"tipo": "FOTO_EQUIPO", "clave": subida["clave"], "sha256": hashlib.sha256(datos).hexdigest(),
+                                       "mime": "image/png", "tamano": len(datos), "objeto": uid})
+    assert r.status_code == 422, r.text
+    r = await gen.get(f"/objetos/{codigo}/fotos")
+    assert r.status_code == 200 and len(r.json()) == 5 and all(x["url"] for x in r.json()), r.text
+    assert {x["mime"] for x in r.json()} == {"image/png", "image/webp"}
+    descarga = await gen.c.get(r.json()[0]["url"].removeprefix("/api/v1"))
+    assert descarga.status_code == 200
+    # La entrega de las cinco URL debe haber registrado cinco accesos RN-07.
+    import os
+    import psycopg2
+    with psycopg2.connect(dbname=os.getenv("DB_NOMBRE", "ecoraee"), host=os.getenv("PGHOST", "localhost"),
+                          user=os.getenv("PGUSER", "ecoraee_admin"), password=os.getenv("PGPASSWORD")) as conn:
+        with conn.cursor() as cur:
+            cur.execute("""SELECT count(*) FROM evd.acceso_evidencia a JOIN evd.evidencia_vinculo v ON v.evidencia_id = a.evidencia_id
+                            JOIN trz.objeto_trazable o ON o.id = v.objeto_id WHERE o.uid = %s AND a.resultado = 'PERMITIDO'""", (uid,))
+            assert cur.fetchone()[0] == 5
+    assert (await otro.get(f"/objetos/{codigo}/fotos")).status_code == 404
+    assert (await gen.post("/evidencias/subida", {"tipo": "FOTO_EQUIPO", "mime": "image/png", "tamano": 10 * 1024 * 1024 + 1})).status_code == 422

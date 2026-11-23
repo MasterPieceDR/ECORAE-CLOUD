@@ -11,6 +11,12 @@ from ..seguridad import Sesion, sesion
 
 router = APIRouter(prefix="/evidencias", tags=["Evidencias"])
 MAX_BYTES = 25 * 1024 * 1024
+MAX_IMAGEN = 10 * 1024 * 1024
+
+
+def validar_tamano(mime: str, tamano: int):
+    if mime.startswith("image/") and tamano > MAX_IMAGEN:
+        raise ErrorAPI(422, "La imagen supera el límite de 10 MB", "EC422")
 
 
 class SubidaIn(BaseModel):
@@ -31,6 +37,7 @@ class RegistroIn(BaseModel):
 @router.post("/subida")
 async def preparar_subida(d: SubidaIn, s: Sesion = Depends(sesion)):
     """Devuelve la URL donde el navegador sube el archivo. La API no recibe el binario."""
+    validar_tamano(d.mime, d.tamano)
     async with s.tx() as conn:
         cat = await conn.fetchval("SELECT api.fn_catalogos() -> 'tipos_evidencia'")
         eco = await conn.fetchval("SELECT (api.fn_perfil() ->> 'ecosistema')")
@@ -46,6 +53,7 @@ async def preparar_subida(d: SubidaIn, s: Sesion = Depends(sesion)):
 
 @router.post("", status_code=201)
 async def registrar(d: RegistroIn, s: Sesion = Depends(sesion)):
+    validar_tamano(d.mime, d.tamano)
     bucket = config().bucket_evidencias
     if not d.clave.startswith("eco-"):
         raise ErrorAPI(422, "Clave de almacenamiento inválida", "EC422")
