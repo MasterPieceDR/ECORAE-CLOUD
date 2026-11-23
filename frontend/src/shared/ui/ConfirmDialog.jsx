@@ -1,0 +1,2 @@
+import { Modal } from './Modal';
+export function ConfirmDialog({ title = 'Confirmar acción', description, confirmLabel = 'Confirmar', cancelLabel = 'Cancelar', onConfirm, onClose, busy = false }) { return <Modal title={title} onClose={onClose}><p>{description}</p><div className="actions-row"><button type="button" className="btn btn--ghost" onClick={onClose} disabled={busy}>{cancelLabel}</button><button type="button" className="btn btn--danger" onClick={onConfirm} disabled={busy}>{confirmLabel}</button></div></Modal>; }

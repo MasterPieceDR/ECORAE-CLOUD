@@ -1,0 +1,1 @@
+export function Stepper({ steps, current = 0 }) { return <ol className="stepper" aria-label="Progreso">{steps.map((step, i) => <li key={i} aria-current={i === current ? 'step' : undefined} data-complete={i < current}><span aria-hidden="true">{i < current ? '✓' : i + 1}</span>{typeof step === 'string' ? step : step.label}</li>)}</ol>; }

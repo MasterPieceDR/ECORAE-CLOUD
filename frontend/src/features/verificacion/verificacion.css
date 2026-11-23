@@ -2,26 +2,26 @@
 .vf-chain__step { position: relative; display: grid; justify-items: center; gap: 4px; }
 .vf-chain__step b { font-size: 16px; font-weight: 600; }
 .vf-chain__step small { color: var(--muted); font-size: 13px; }
-.vf-chain__dot { position: relative; z-index: 1; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--line); background: #0C1F17; color: var(--muted); }
-.vf-chain__dot[data-ok] { border-color: var(--lime); color: var(--lime); box-shadow: 0 0 24px rgb(182 243 106 / .35); }
+.vf-chain__dot { position: relative; z-index: 1; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--line); background: var(--bg); color: var(--muted); }
+.vf-chain__dot[data-ok] { border-color: var(--lime); color: var(--lime); box-shadow: 0 0 24px color-mix(in srgb, var(--primary) 35%, transparent); }
 .vf-chain__line { position: absolute; top: 27px; right: 50%; width: 100%; height: 2px; background: var(--line); transform-origin: left; }
 .vf-chain__line[data-ok] { background: linear-gradient(90deg, var(--leaf), var(--lime)); }
 .vf-chain__meta { grid-column: 1 / -1; margin: 8px 0 0; }
-.vf-ok { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; margin-bottom: 14px; border-color: rgb(255 138 104 / .45); background: rgb(255 138 104 / .07); color: var(--coral); }
-.vf-ok[data-ok] { border-color: rgb(182 243 106 / .45); background: rgb(182 243 106 / .07); color: var(--lime); }
+.vf-ok { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; margin-bottom: 14px; border-color: color-mix(in srgb, var(--danger) 45%, transparent); background: color-mix(in srgb, var(--danger) 7%, transparent); color: var(--coral); }
+.vf-ok[data-ok] { border-color: color-mix(in srgb, var(--primary) 45%, transparent); background: color-mix(in srgb, var(--primary) 7%, transparent); color: var(--lime); }
 .vf-ok b { font-size: 18px; font-weight: 600; color: var(--text); }
 .vf-ok p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
 .vf-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 14px; }
 @media (max-width: 900px) { .vf-grid { grid-template-columns: minmax(0, 1fr); } }
 .vf-checks { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
-.vf-checks li { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; padding: 10px 12px; border-radius: 12px; border: 1px solid rgb(255 138 104 / .35); background: rgb(255 138 104 / .06); }
-.vf-checks li[data-ok] { border-color: var(--line); background: rgb(255 255 255 / .03); }
-.vf-checks__i { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--coral); color: #1A0904; }
-.vf-checks li[data-ok] .vf-checks__i { background: var(--lime); color: #071209; }
+.vf-checks li { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; padding: 10px 12px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); background: color-mix(in srgb, var(--danger) 6%, transparent); }
+.vf-checks li[data-ok] { border-color: var(--line); background: color-mix(in srgb, var(--text) 3%, transparent); }
+.vf-checks__i { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--coral); color: var(--danger); }
+.vf-checks li[data-ok] .vf-checks__i { background: var(--lime); color: var(--bg); }
 .vf-checks b { font-weight: 500; font-size: 14.5px; display: block; }
 .vf-checks small { color: var(--muted); font-size: 12.5px; }
 .vf-nums { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 0; }
-.vf-nums div { padding: 10px 12px; border-radius: 12px; background: rgb(255 255 255 / .04); }
+.vf-nums div { padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--text) 4%, transparent); }
 .vf-nums dt { font-size: 12.5px; color: var(--muted); }
 .vf-nums dd { margin: 0; font-size: 22px; font-weight: 600; color: var(--lime); }
 .vf-raw td { font-size: 12.5px; white-space: nowrap; max-width: 360px; overflow: hidden; text-overflow: ellipsis; }

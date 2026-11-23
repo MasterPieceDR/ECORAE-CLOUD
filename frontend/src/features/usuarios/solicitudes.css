@@ -1,8 +1,8 @@
 .sol-list { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 10px; }
-.sol-list li { display: grid; gap: 6px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: rgb(255 255 255 / .03); }
+.sol-list li { display: grid; gap: 6px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: color-mix(in srgb, var(--text) 3%, transparent); }
 .sol-list li > div:first-child { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .sol-list .btn { justify-self: start; }
-.sol-resp { margin: 0; color: #C9D6CD; font-size: 14px; font-style: italic; }
+.sol-resp { margin: 0; color: var(--text); font-size: 14px; font-style: italic; }
 .sol-box { margin-bottom: 16px; }
 .sol-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
 .sol-head .detail__h2 { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }

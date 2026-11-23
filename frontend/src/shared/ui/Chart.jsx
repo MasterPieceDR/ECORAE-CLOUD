@@ -16,8 +16,20 @@ export function Chart({ option, onClick, label }) {
     return () => { observer.disconnect(); c.dispose(); chart.current = null; };
   }, []);
   useEffect(() => {
-    const styles = getComputedStyle(document.documentElement);
-    chart.current?.setOption({ textStyle: { color: styles.getPropertyValue('--text').trim() }, color: ['--lime', '--leaf', '--coral', '--sky', '--sun'].map((token) => styles.getPropertyValue(token).trim()), ...option }, { notMerge: false, lazyUpdate: true });
+    const aplicar = () => {
+      const styles = getComputedStyle(document.documentElement);
+      const token = (name) => styles.getPropertyValue(name).trim();
+      chart.current?.setOption({ ...option, textStyle: { ...option.textStyle, color: token('--text') },
+        color: ['--primary', '--secondary', '--accent', '--accent-strong'].map(token),
+        tooltip: { ...option.tooltip, backgroundColor: token('--surface'), borderColor: token('--line'), textStyle: { color: token('--text') } },
+        legend: option.legend ? { ...option.legend, textStyle: { ...option.legend.textStyle, color: token('--text') } } : undefined,
+        yAxis: option.yAxis ? { ...option.yAxis, axisLabel: { ...option.yAxis.axisLabel, color: token('--muted') } } : undefined,
+      }, { notMerge: false, lazyUpdate: true });
+    };
+    aplicar();
+    const observer = new MutationObserver(aplicar);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
   }, [option]);
   return <div ref={el} role="img" aria-label={label} style={{ width: '100%', height: 320 }} />;
 }

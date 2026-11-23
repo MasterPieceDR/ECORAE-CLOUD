@@ -12,6 +12,8 @@ const all = (root, sel) => [...root.querySelectorAll(sel)];
 const EXPO = 'expo.out';
 
 let lenis = null;
+const preferenciaMovimiento = matchMedia('(prefers-reduced-motion: reduce)');
+preferenciaMovimiento.addEventListener('change', () => { if (preferenciaMovimiento.matches && lenis) { lenis.destroy(); lenis = null; } else if (!preferenciaMovimiento.matches) startSmoothScroll(); });
 // Sin pantalla de carga, los títulos entran de inmediato en lugar de esperarla.
 let introDone = (() => { try { return sessionStorage.getItem('eco-intro') === '1'; } catch { return false; } })();
 
@@ -310,7 +312,7 @@ export function cursor(el) {
 }
 
 // Red de partículas que reacciona al cursor.
-export function particles(canvas, { color = '160,240,180', density = 15000, link = 130 } = {}) {
+export function particles(canvas, { density = 15000, link = 130 } = {}) {
   if (!canvas || reduced()) return () => {};
   const ctx = canvas.getContext('2d');
   const dpr = Math.min(devicePixelRatio, 2);
@@ -335,11 +337,11 @@ export function particles(canvas, { color = '160,240,180', density = 15000, link
       for (let k = i + 1; k < nodes.length; k += 1) {
         const q = nodes[k];
         const d = Math.hypot(p.x - q.x, p.y - q.y);
-        if (d < link) { ctx.strokeStyle = `rgba(${color},${(1 - d / link) * 0.32})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); }
+        if (d < link) { ctx.globalAlpha = (1 - d / link) * 0.32; ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim(); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); }
       }
       const dm = Math.hypot(p.x - mouse.x, p.y - mouse.y);
-      if (dm < 180) { ctx.strokeStyle = `rgba(${color},${(1 - dm / 180) * 0.7})`; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(mouse.x, mouse.y); ctx.stroke(); }
-      ctx.fillStyle = `rgba(${color},.85)`;
+      if (dm < 180) { ctx.globalAlpha = (1 - dm / 180) * 0.7; ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim(); ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(mouse.x, mouse.y); ctx.stroke(); }
+      ctx.globalAlpha = .85; ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
       ctx.beginPath(); ctx.arc(p.x, p.y, 1.7, 0, 7); ctx.fill();
     });
   };
@@ -354,7 +356,7 @@ export function particles(canvas, { color = '160,240,180', density = 15000, link
 }
 
 // Planeta de puntos en 3D con conexiones: se dibuja en canvas 2D, sin WebGL.
-export function globe(canvas, { color = '140,240,220', accent = '255,120,200', dots = 900 } = {}) {
+export function globe(canvas, { dots = 900 } = {}) {
   if (!canvas || reduced()) return () => {};
   const ctx = canvas.getContext('2d');
   const dpr = Math.min(devicePixelRatio, 2);
@@ -378,7 +380,7 @@ export function globe(canvas, { color = '140,240,220', accent = '255,120,200', d
       const y1 = y * ct - z1 * st; const z2 = y * st + z1 * ct;
       const alpha = 0.12 + ((z2 + 1) / 2) * 0.88;
       const s = hot ? 2.4 : 1.3;
-      ctx.fillStyle = `rgba(${hot ? accent : color},${alpha})`;
+      ctx.globalAlpha = alpha; ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue(hot ? '--accent' : '--primary').trim();
       ctx.beginPath(); ctx.arc(w / 2 + x1 * R, h / 2 + y1 * R, s * (0.5 + (z2 + 1) / 3), 0, 7); ctx.fill();
     });
   };

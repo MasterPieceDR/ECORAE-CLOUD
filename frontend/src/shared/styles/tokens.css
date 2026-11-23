@@ -1,19 +1,21 @@
 :root {
-  --bg: #06120D;
-  --bg-2: #0A1C14;
-  --glass: rgb(255 255 255 / .05);
-  --glass-2: rgb(255 255 255 / .09);
-  --line: rgb(255 255 255 / .12);
-  --text: #EEF6EF;
-  --muted: #9EB4A7;
-  --lime: #B6F36A;
-  --leaf: #2FA36B;
-  --coral: #FF8A68;
-  --sun: #F4C04E;
-  --sky: #7CC8FF;
-  --radius: 22px;
-  --display: 'Bricolage Grotesque Variable', system-ui, sans-serif;
-  --accent-font: 'Instrument Serif', Georgia, serif;
-  --cursor: #B6F36A;
+  --bg: #F4F1E8; --surface: #FBFAF5; --surface-2: #D9D3BF;
+  --text: #1E2B27; --muted: #4A5752; --primary: #4A786B; --primary-strong: #2F5A4F; --on-primary: #FBFAF5;
+  --secondary: #8FB09A; --secondary-soft: #DCE8DF; --accent: #A89078; --accent-strong: #7A6450;
+  --line: rgb(30 43 39 / .12); --success: #2F6B4F; --success-bg: #E3EFE6;
+  --warning: #8A621A; --warning-bg: #F6EBCF; --danger: #A63D2E; --danger-bg: #F7E1DC;
+  --info: #2E5E78; --info-bg: #DEEBF2; --shadow: rgb(30 43 39 / .08);
+  /* Alias de transición: las vistas existentes conservan sus clases y nombres. */
+  --bg-2: var(--surface-2); --glass: var(--surface); --glass-2: var(--surface-2);
+  --lime: var(--primary-strong); --leaf: var(--secondary); --coral: var(--danger); --sun: var(--warning); --sky: var(--info); --cursor: var(--primary);
+  --radius: 16px; --display: 'Bricolage Grotesque Variable', system-ui, sans-serif; --accent-font: 'Instrument Serif', Georgia, serif;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #141E1B; --surface: #1C2925; --surface-2: #24332E; --text: #ECE8DA; --muted: #B5BDB4;
+  --primary: #8FB09A; --primary-strong: #A9C6B1; --on-primary: #141E1B; --secondary: #4A786B; --secondary-soft: #26392F;
+  --accent: #C9B39A; --accent-strong: #C9B39A; --line: rgb(236 232 218 / .12);
+  --success: #B8DEC2; --success-bg: #263E30; --warning: #F0D495; --warning-bg: #493B20;
+  --danger: #FFB8AA; --danger-bg: #4B2925; --info: #B4D8EA; --info-bg: #233D4A; --shadow: rgb(0 0 0 / .24);
   color-scheme: dark;
 }

@@ -8,5 +8,6 @@ import '@/shared/styles/base.css';
 import { App } from '@/app/App';
 import { startSmoothScroll } from '@/shared/cinema/index.js';
 
+import '@/shared/styles/theme';
 startSmoothScroll();
 createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>);

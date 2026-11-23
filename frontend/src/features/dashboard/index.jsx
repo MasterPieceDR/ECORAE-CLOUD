@@ -26,7 +26,7 @@ export function DashboardPage() {
   const porEstado = Object.fromEntries((s?.por_estado ?? []).map((x) => [x.estado, x.n]));
   const navigate = useNavigate();
   const estados = c.estados.filter((e) => e.codigo !== 'DESAGRUPADO');
-  const barras = useMemo(() => ({ tooltip: { trigger: 'axis' }, grid: { left: 150, right: 25, top: 10, bottom: 25 }, xAxis: { type: 'value' }, yAxis: { type: 'category', data: estados.map((e) => e.nombre), axisLabel: { color: '#9EB4A7' } }, series: [{ type: 'bar', data: estados.map((e) => ({ value: porEstado[e.codigo] ?? 0, codigo: e.codigo })) }] }), [s, c]);
+  const barras = useMemo(() => ({ tooltip: { trigger: 'axis' }, grid: { left: 150, right: 25, top: 10, bottom: 25 }, xAxis: { type: 'value' }, yAxis: { type: 'category', data: estados.map((e) => e.nombre), axisLabel: { color: 'var(--muted)' } }, series: [{ type: 'bar', data: estados.map((e) => ({ value: porEstado[e.codigo] ?? 0, codigo: e.codigo })) }] }), [s, c]);
   const dona = useMemo(() => ({ tooltip: { trigger: 'item' }, series: [{ type: 'pie', radius: ['45%', '70%'], data: (s?.por_clasificacion ?? []).map((x) => ({ name: c.clasificaciones.find((k) => k.codigo === x.clasificacion)?.nombre ?? x.clasificacion, value: x.n })) }] }), [s, c]);
   const rol = user.roles[0];
   return (
@@ -54,8 +54,8 @@ export function DashboardPage() {
           {s.red ? (
             <article className="kpi kpi--ring" data-tilt="5" data-rise>
               <svg viewBox="0 0 150 150" width="112" height="112" aria-hidden="true">
-                <circle cx="75" cy="75" r={R} fill="none" stroke="rgb(255 255 255 / .1)" strokeWidth="11" />
-                <circle cx="75" cy="75" r={R} fill="none" stroke="#FF8A68" strokeWidth="11" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - s.red.cobertura / 100)} transform="rotate(-90 75 75)" />
+                <circle cx="75" cy="75" r={R} fill="none" stroke="var(--line)" strokeWidth="11" />
+                <circle cx="75" cy="75" r={R} fill="none" stroke="var(--danger)" strokeWidth="11" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - s.red.cobertura / 100)} transform="rotate(-90 75 75)" />
               </svg>
               <div><b>{s.red.cobertura} %</b><span>Capacidad de la red (E0)</span><small>{s.red.flujo_maximo} de {s.red.generacion} equipos por semana</small></div>
             </article>
@@ -143,7 +143,7 @@ function Proyeccion() {
     const historia = valores(h), pronostico = valores(p), registradas = valores(plataforma);
     const ultimo = h.at(-1);
     const porFecha = Object.fromEntries(p.map((x) => [x.semana, x]));
-    return { tooltip: { trigger: 'axis' }, legend: { textStyle: { color: '#9EB4A7' }, data: ['Historia', 'Pronóstico', 'Banda 80 %', ...(plataforma.length ? ['Registradas en la plataforma'] : [])] }, grid: { left: 55, right: 20, bottom: 45 },
+    return { tooltip: { trigger: 'axis' }, legend: { textStyle: { color: 'var(--muted)' }, data: ['Historia', 'Pronóstico', 'Banda 80 %', ...(plataforma.length ? ['Registradas en la plataforma'] : [])] }, grid: { left: 55, right: 20, bottom: 45 },
       xAxis: { type: 'category', data: fechas }, yAxis: { type: 'value' },
       series: [{ name: 'Historia', type: 'line', showSymbol: false, data: fechas.map((f) => historia[f] ?? null) },
         { name: 'Pronóstico', type: 'line', showSymbol: false, lineStyle: { type: 'dashed' }, data: fechas.map((f) => pronostico[f] ?? (f === ultimo?.semana ? ultimo.valor : null)) },

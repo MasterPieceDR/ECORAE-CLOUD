@@ -1,5 +1,7 @@
 // Trazos de 24x24 para usar con fill="none" stroke="currentColor".
 export const ICONS = {
+  clock: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2',
+  circle: 'M12 3a9 9 0 100 18 9 9 0 000-18z',
   home: 'M3 11l9-8 9 8M5 9.5V21h5v-6h4v6h5V9.5',
   box: 'M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8',
   network: 'M5 8a2 2 0 100-4 2 2 0 000 4zM19 8a2 2 0 100-4 2 2 0 000 4zM12 20a2 2 0 100-4 2 2 0 000 4zM6 8l5 8.5M18 8l-5 8.5M7 6h10',

@@ -227,3 +227,88 @@ URL prefirmadas (el navegador sube directo a S3; por eso el bucket necesita CORS
 - **Plantilla del correo:** texto plano + HTML simple en español, sin enlaces de seguimiento ni datos innecesarios.
 - **Pruebas:** registro → pendiente → login rechazado → código incorrecto (intentos) → código vencido → reenvío con
   límite → código correcto → login OK. Las cuentas sintéticas existentes siguen activas.
+
+---
+
+## TAREA 5 — Rediseño visual con la paleta «natural» y mejoras de usabilidad
+
+Objetivo: una interfaz más clara, cálida e intuitiva (RNF-07), coherente en todas las vistas, accesible (WCAG 2.1 AA)
+y con la paleta elegida por el equipo: verde azulado, salvia, madera y crema.
+
+### 5.1 Tokens de diseño (contraste verificado)
+
+Todos los pares de texto/fondo de abajo superan 4,5:1. **Ningún color se escribe a mano en los componentes**: todo sale
+de variables CSS de `shared/styles/tokens.css` (hoy hay colores fijos repetidos, por ejemplo `#071209` 18 veces y
+`#B6F36A` 9 veces, que deben desaparecer).
+
+| Token | Claro (por defecto) | Oscuro | Uso |
+|---|---|---|---|
+| `--bg` | `#F4F1E8` | `#141E1B` | Fondo de la aplicación |
+| `--surface` | `#FBFAF5` | `#1C2925` | Tarjetas, tablas, modales |
+| `--surface-2` | `#D9D3BF` (crema de la paleta) | `#24332E` | Barras laterales, filas alternas, chips |
+| `--text` | `#1E2B27` (13:1) | `#ECE8DA` (13,9:1) | Texto principal |
+| `--muted` | `#4A5752` (6,7:1) | `#B5BDB4` (8,8:1) | Texto secundario |
+| `--primary` | `#4A786B` (paleta) | `#8FB09A` | Botón primario, enlaces grandes, foco |
+| `--primary-strong` | `#2F5A4F` (6,9:1) | `#A9C6B1` | Texto/enlace sobre fondo; hover del primario |
+| `--on-primary` | `#FBFAF5` (4,8:1 sobre primario) | `#141E1B` (7,2:1) | Texto sobre el botón primario |
+| `--secondary` | `#8FB09A` (salvia) | `#4A786B` | Rellenos suaves, selección, series de gráficos |
+| `--secondary-soft` | `#DCE8DF` | `#26392F` | Fondos de chips y filas seleccionadas |
+| `--accent` | `#A89078` (madera) | `#C9B39A` | Detalles, ilustraciones, serie de gráfico |
+| `--accent-strong` | `#7A6450` (4,9:1) | `#C9B39A` | Texto en madera |
+| `--line` | `rgb(30 43 39 / .12)` | `rgb(236 232 218 / .12)` | Bordes |
+| `--success` / fondo | `#2F6B4F` / `#E3EFE6` | ajustar con ≥ 4,5:1 | Estados finales correctos |
+| `--warning` / fondo | `#8A621A` / `#F6EBCF` | ídem | Pendientes, bloqueado |
+| `--danger` / fondo | `#A63D2E` / `#F7E1DC` | ídem | Errores, anulado, no recuperable |
+| `--info` / fondo | `#2E5E78` / `#DEEBF2` | ídem | En tránsito, información |
+
+- Tema **claro por defecto**; selector Claro / Oscuro / Sistema en la barra superior, guardado en `localStorage`
+  (con try/catch) y respetando `prefers-color-scheme` en «Sistema». `color-scheme` acorde al tema.
+- Radios más contenidos (12–16 px), sombras suaves cálidas (`rgb(30 43 39 / .08)`), espaciado en escala de 4 px.
+- Tipografía: se mantienen las fuentes del proyecto; cuerpo 15–16 px, interlineado 1,5; títulos con jerarquía clara.
+- `prefers-reduced-motion`: desactivar parallax, tilt y desplazamiento suave (gsap/lenis); animaciones breves (≤ 250 ms).
+- Gráficos ECharts con la paleta: primario, salvia, madera y crema oscurecido; tooltips con fondo `--surface`.
+
+### 5.2 Componentes compartidos (en `shared/ui`)
+
+`PageHeader` (título, descripción, acción principal, migas de pan), `StatusBadge` con ícono + texto (nunca solo color),
+`EmptyState` (ilustración simple, qué significa y qué hacer), `Skeleton` coherente, `Stepper` para procesos de varios
+pasos, `Tabs`, `Field` con texto de ayuda y error en línea, `ConfirmDialog` para acciones irreversibles, `Toast` con
+`role="status"`, botón de archivo accesible ya existente. Foco visible en todo (anillo `--primary`, 2 px).
+
+### 5.3 Navegación y estructura
+
+- Barra lateral agrupada por propósito: **Operación** (Inicio, Mis tareas, Equipos y lotes, Catálogo, Documentos),
+  **Red y análisis** (Red de flujo), **Aprender** (Capacitación), **Gobierno** (Usuarios, Auditoría, Base de datos),
+  mostrando solo lo que el rol puede usar; indicador de la vista activa; contador de tareas pendientes.
+- En móvil: barra lateral como cajón con botón de menú y barra inferior con las 4 vistas principales.
+- Barra superior: buscador global (equipos, lotes, número de serie), selector de tema, asistente y menú de usuario.
+
+### 5.4 Vistas
+
+- **Inicio (dashboard):** cabecera breve con saludo y «qué hacer ahora» (tareas pendientes como acceso directo);
+  fila de indicadores clave en cuadrícula; gráficos lado a lado en escritorio (estado y clasificación) y la proyección a
+  ancho completo; actividad reciente compacta. Menos fotografía decorativa encima de los datos.
+- **Mis tareas:** agrupadas por acción con botón directo para ejecutarla; estado vacío amable.
+- **Equipos y lotes:** filtros visibles en una barra (estado, categoría, centro, serie) con chips de filtros activos y
+  limpiar todo; tabla con columnas claras y estado con `StatusBadge`; en móvil, tarjetas.
+- **Ficha del equipo:** cabecera con código, estado y acciones disponibles como botones primario/secundarios;
+  pestañas o secciones: Resumen (datos del equipo, modelo, serie), Línea de tiempo (vertical, con íconos por tipo de
+  paso), Fotos (galería), Evidencias y documentos.
+- **Registrar / acciones (diálogos):** formularios en secciones con títulos, ayuda bajo cada campo, validación en
+  línea y el botón principal siempre visible; acciones irreversibles con confirmación.
+- **Catálogo:** tarjetas o tabla con miniatura de la foto del modelo, filtros por categoría y marca, insignia de estado
+  con ícono (candado / reloj) y cuenta regresiva legible.
+- **Inicio de sesión, registro y verificación:** diseño en dos columnas con imagen sobria; registro con indicador de
+  pasos «1 Datos · 2 Verificar correo»; mensajes de error claros; panel de cuentas demo plegable y discreto (solo DEMO).
+- **Landing:** mismo lenguaje visual con la paleta; llamada a la acción clara («Ingresar» / «Crear cuenta»).
+- **Red de flujo, Capacitación, Documentos, Base de datos, Usuarios y solicitudes, Auditoría, Perfil, Asistente:**
+  aplicar `PageHeader`, tokens, estados vacíos y tablas/tarjetas consistentes; en la red, colores del grafo con la
+  paleta (aristas saturadas en `--danger`, corte mínimo resaltado) y leyenda.
+
+### 5.5 Criterios de aceptación
+
+- `npm run build` sin errores; las pruebas de la API siguen en verde (no se toca el backend).
+- Sin colores fijos fuera de `tokens.css` (verificable con una búsqueda de `#[0-9a-fA-F]{6}` y `rgb(` en `src`).
+- Contraste AA en ambos temas; navegación completa con teclado; nada depende solo del color.
+- Sin desplazamiento horizontal entre 360 px y 1440 px de ancho.
+- Informe en `docs/informes/` por cada etapa, con archivos cambiados y verificaciones.

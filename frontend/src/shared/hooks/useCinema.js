@@ -6,7 +6,11 @@ export function useCinema(ready = true) {
   const ref = useRef(null);
   useEffect(() => {
     if (!ready || !ref.current) return undefined;
-    return scan(ref.current);
+    const media = matchMedia('(prefers-reduced-motion: reduce)');
+    let limpiar = scan(ref.current);
+    const actualizar = () => { limpiar(); limpiar = scan(ref.current); };
+    media.addEventListener('change', actualizar);
+    return () => { media.removeEventListener('change', actualizar); limpiar(); };
   }, [ready]);
   return ref;
 }

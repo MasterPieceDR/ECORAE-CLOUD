@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 
-export const COLORS = { holgura: '#5BD6A0', saturada: '#F4C04E', corte: '#FF7A59' };
+export const COLORS = { holgura: 'var(--success)', saturada: 'var(--warning)', corte: 'var(--danger)' };
 // Columna por tipo de nodo: s → generadores → acopios → evaluación → taller → destinos → t
 const COLUMNA = { FUENTE: 0, GENERADOR: 1, ACOPIO: 2, EVALUACION: 3, REACONDICIONAMIENTO: 4, BENEFICIARIO: 5, RECICLAJE: 5, DISPOSICION: 5, SUMIDERO: 6 };
 const W = 1000;
@@ -86,7 +86,7 @@ export function FlowGraph({ red, resultado, corte, seleccion, onSelect, modo = '
     const { d, lx, ly } = curva(a, b);
     const destacada = corte && enCorte(e.origen, e.destino);
     const activa = !activasA || activasA.has(k);
-    const color = corte && !activasA ? (destacada ? COLORS.corte : 'rgb(255 255 255 / .22)') : COLORS[e.estado];
+    const color = corte && !activasA ? (destacada ? COLORS.corte : 'var(--line)') : COLORS[e.estado];
     const ancho = 2 + (Math.min(e.flujo, maxFlujo) / maxFlujo) * 9;
     const virtual = e.origen === 's' || e.destino === 't';
     return { e, k, d, lx, ly, destacada, activa, color, ancho, virtual };
@@ -103,11 +103,11 @@ export function FlowGraph({ red, resultado, corte, seleccion, onSelect, modo = '
       {/* 1. aristas */}
       {trazos.map(({ e, k, d, destacada, activa, color, ancho, virtual }) => (
         <g key={k} className="graph__edge" opacity={activa ? (corte && !destacada && !activasA ? 0.55 : 1) : 0.12}>
-          <path d={d} fill="none" stroke="rgb(255 255 255 / .08)" strokeWidth={ancho + 3} strokeLinecap="round" strokeDasharray={virtual ? '6 6' : undefined} />
-          {esSel(e) && <path d={d} fill="none" stroke="#fff" strokeOpacity=".9" strokeWidth={ancho + 6} strokeLinecap="round" />}
+          <path d={d} fill="none" stroke="var(--line)" strokeWidth={ancho + 3} strokeLinecap="round" strokeDasharray={virtual ? '6 6' : undefined} />
+          {esSel(e) && <path d={d} fill="none" stroke="var(--surface)" strokeOpacity=".9" strokeWidth={ancho + 6} strokeLinecap="round" />}
           <motion.path d={d} fill="none" stroke={color} strokeLinecap="round" strokeDasharray={virtual ? '6 6' : undefined}
             filter={destacada || (!corte && e.estado === 'corte') ? 'url(#glow)' : undefined} animate={{ strokeWidth: e.flujo ? ancho : 1 }} />
-          {e.flujo > 0 && !virtual && <path className="graph__pulse" d={d} fill="none" stroke="#fff" strokeOpacity=".5" strokeWidth={Math.max(1.5, ancho / 3)} strokeDasharray="4 16" strokeLinecap="round" />}
+          {e.flujo > 0 && !virtual && <path className="graph__pulse" d={d} fill="none" stroke="var(--surface)" strokeOpacity=".5" strokeWidth={Math.max(1.5, ancho / 3)} strokeDasharray="4 16" strokeLinecap="round" />}
           {/* zona de toque amplia e invisible */}
           <path d={d} className="graph__hit" onClick={elegir({ tipo: 'arista', origen: e.origen, destino: e.destino })}
             onPointerEnter={() => setHover({ tipo: 'arista', origen: e.origen, destino: e.destino })} onPointerLeave={() => setHover(null)}>
@@ -119,7 +119,7 @@ export function FlowGraph({ red, resultado, corte, seleccion, onSelect, modo = '
       {/* 2. etiquetas por encima de todas las líneas */}
       {trazos.map(({ e, k, lx, ly, activa, color, destacada }) => (
         <g key={`l-${k}`} opacity={activa ? 1 : 0.08} pointerEvents="none">
-          <Etiqueta x={lx} y={ly} color={corte && !activasA ? (destacada ? COLORS.corte : 'rgb(255 255 255 / .2)') : color} fuerte={activasA && activa}>{texto(e, modo)}</Etiqueta>
+          <Etiqueta x={lx} y={ly} color={corte && !activasA ? (destacada ? COLORS.corte : 'var(--line)') : color} fuerte={activasA && activa}>{texto(e, modo)}</Etiqueta>
         </g>
       ))}
 
@@ -139,9 +139,9 @@ export function FlowGraph({ red, resultado, corte, seleccion, onSelect, modo = '
             onClick={elegir(sel)} onKeyDown={teclado(sel)}
             onPointerEnter={() => setHover(sel)} onPointerLeave={() => setHover(null)} onFocus={() => setHover(sel)} onBlur={() => setHover(null)}>
             <circle r="36" fill="transparent" />
-            {elegido && <circle r="35" fill="none" stroke="#fff" strokeWidth="2" strokeDasharray="5 5" className="graph__sel" />}
+            {elegido && <circle r="35" fill="none" stroke="var(--surface)" strokeWidth="2" strokeDasharray="5 5" className="graph__sel" />}
             {cn && <circle r="29" fill="none" stroke={rojo ? COLORS.corte : COLORS[cn.estado]} strokeWidth="4" strokeDasharray={`${Math.min(1, cn.flujo / cn.capacidad) * 182} 182`} transform="rotate(-90)" filter={rojo ? 'url(#glowN)' : undefined} />}
-            <circle r="21" className="graph__dot" stroke={rojo ? COLORS.corte : '#B6F36A'} data-on={enfocado || elegido || undefined} />
+            <circle r="21" className="graph__dot" stroke={rojo ? COLORS.corte : 'var(--primary-strong)'} data-on={enfocado || elegido || undefined} />
             <text textAnchor="middle" dy="4" className="graph__id">{n.codigo}</text>
             <text textAnchor="middle" y="46" className="graph__name" data-on={enfocado || undefined}>{nombre}</text>
             {cn && <g pointerEvents="none"><Etiqueta x={0} y={-47} color={rojo ? COLORS.corte : COLORS[cn.estado]}>{modo === 'uso' ? `procesa ${cn.uso} %` : `procesa ${fmt(cn.flujo)}/${fmt(cn.capacidad)}`}</Etiqueta></g>}

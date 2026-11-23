@@ -46,7 +46,7 @@ export async function descargarPNG(svg, nombre) {
   const escala = 2;
   copia.setAttribute('width', w); copia.setAttribute('height', h);
   const fondo = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  fondo.setAttribute('width', w); fondo.setAttribute('height', h); fondo.setAttribute('fill', '#07140E');
+  fondo.setAttribute('width', w); fondo.setAttribute('height', h); fondo.setAttribute('fill', getComputedStyle(document.documentElement).getPropertyValue('--bg').trim());
   copia.insertBefore(fondo, copia.firstChild);
   const datos = new XMLSerializer().serializeToString(copia);
   const img = new Image();

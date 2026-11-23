@@ -17,7 +17,7 @@ export function LandingPage() {
   const [open, setOpen] = useState(false);
   useEffect(() => { if (loader.current) preloader(loader.current); }, []);
   useEffect(() => cursor(pointer.current), []);
-  useEffect(() => particles(net.current, { color: '182,243,106', density: 22000 }), []);
+  useEffect(() => particles(net.current, { density: 22000 }), []);
   const jump = (id) => (e) => { e.preventDefault(); setOpen(false); scrollToId(id); };
   return (
     <div className="lp" ref={root}>
@@ -113,10 +113,10 @@ export function LandingPage() {
           <div className="plat__grid">
             <article className="plat__main" data-tilt="3" data-rise>
               <svg viewBox="0 0 640 300" role="img" aria-label="Esquema de la red de centros, evaluación y destinos">
-                {['M60 60C180 60 180 150 300 150', 'M60 150C180 150 180 150 300 150', 'M60 240C180 240 180 150 300 150', 'M340 150C450 150 450 60 580 60', 'M340 150C450 150 450 150 580 150', 'M340 150C450 150 450 240 580 240'].map((d, i) => <path key={d} data-draw d={d} fill="none" stroke={i === 3 || i === 4 ? '#B6F36A' : 'rgb(255 255 255 / .35)'} strokeWidth="3" />)}
-                {[[60, 60], [60, 150], [60, 240], [580, 60], [580, 150], [580, 240]].map(([x, y]) => <circle key={`${x}-${y}`} cx={x} cy={y} r="11" fill="#0A1C14" stroke="#B6F36A" strokeWidth="2.500" />)}
-                <circle cx="320" cy="150" r="40" fill="#FF8A68" opacity=".18" /><circle cx="320" cy="150" r="24" fill="#FF8A68" />
-                <text x="320" y="214" textAnchor="middle" fill="#FFC3B2" fontSize="15" fontWeight="600">Evaluación: 160 / 160</text>
+                {['M60 60C180 60 180 150 300 150', 'M60 150C180 150 180 150 300 150', 'M60 240C180 240 180 150 300 150', 'M340 150C450 150 450 60 580 60', 'M340 150C450 150 450 150 580 150', 'M340 150C450 150 450 240 580 240'].map((d, i) => <path key={d} data-draw d={d} fill="none" stroke={i === 3 || i === 4 ? 'var(--primary-strong)' : 'var(--line)'} strokeWidth="3" />)}
+                {[[60, 60], [60, 150], [60, 240], [580, 60], [580, 150], [580, 240]].map(([x, y]) => <circle key={`${x}-${y}`} cx={x} cy={y} r="11" fill="var(--surface-2)" stroke="var(--primary-strong)" strokeWidth="2.500" />)}
+                <circle cx="320" cy="150" r="40" fill="var(--danger)" opacity=".18" /><circle cx="320" cy="150" r="24" fill="var(--danger)" />
+                <text x="320" y="214" textAnchor="middle" fill="var(--danger)" fontSize="15" fontWeight="600">Evaluación: 160 / 160</text>
               </svg>
               <div className="plat__nums"><div><b data-count="200">200</b><span>flujo máximo</span></div><div><b data-count="54" data-suffix=" %">54 %</b><span>cobertura</span></div><div><b data-count="280">280</b><span>con ampliación</span></div></div>
             </article>
