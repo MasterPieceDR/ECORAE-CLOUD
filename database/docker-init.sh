@@ -15,6 +15,7 @@ psql -v ON_ERROR_STOP=1 -q -1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f 17_catalo
 psql -v ON_ERROR_STOP=1 -q -1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f 17b_api_catalogo.sql && echo "ok 17b_api_catalogo.sql"
 psql -v ON_ERROR_STOP=1 -q -1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f 18_historial_recoleccion.sql && echo "ok 18_historial_recoleccion.sql"
 psql -v ON_ERROR_STOP=1 -q -1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f 19_produccion.sql && echo "ok 19_produccion.sql"
+psql -v ON_ERROR_STOP=1 -q -1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f 20_verificacion_correo.sql && echo "ok 20_verificacion_correo.sql"
 psql -v ON_ERROR_STOP=1 -q -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v api_pass="$API_DB_PASS" -v mcp_pass="$MCP_DB_PASS" -f 11_logins_servicio.sql && echo "ok 11_logins_servicio.sql"
 if [ "${DEMO:-true}" = "true" ]; then
   psql -v ON_ERROR_STOP=1 -q -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f 12_datos_demo.sql > /dev/null && echo "ok 12_datos_demo.sql"

@@ -6,7 +6,8 @@ SELECT to_regclass('seg.solicitud_rol') IS NULL AS falta13,
        to_regprocedure('seg.fn_cache_valida(bigint)') IS NULL AS falta16,
        to_regprocedure('api.fn_reabrir_modelo(uuid,text)') IS NULL AS falta17,
        to_regprocedure('api.fn_asignar_imagen_modelo(uuid,text)') IS NULL AS falta17b,
-       to_regclass('ind.historial_recoleccion_semanal') IS NULL AS falta18 \gset
+       to_regclass('ind.historial_recoleccion_semanal') IS NULL AS falta18,
+       to_regclass('seg.verificacion_correo') IS NULL AS falta20 \gset
 \if :falta13
   \echo 'Aplicando 13_mejoras.sql (editor de escenarios y solicitudes de rol)...'
   BEGIN;
@@ -51,4 +52,9 @@ SELECT to_regclass('seg.solicitud_rol') IS NULL AS falta13,
 BEGIN;
 \i /database/19_produccion.sql
 COMMIT;
+\if :falta20
+  BEGIN;
+  \i /database/20_verificacion_correo.sql
+  COMMIT;
+\endif
 \echo 'La base está al día.'

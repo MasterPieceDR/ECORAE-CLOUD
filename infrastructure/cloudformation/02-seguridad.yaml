@@ -47,6 +47,11 @@
       "Type": "String",
       "Default": "pl-3b927c52",
       "Description": "ID regional: aws ec2 describe-managed-prefix-lists --filters Name=prefix-list-name,Values=com.amazonaws.global.cloudfront.origin-facing"
+    },
+    "CorreoRemitente": {
+      "Type": "String",
+      "Default": "no-reply@ecoraee.invalid",
+      "AllowedPattern": "[a-zA-Z0-9._%+@-]+"
     }
   },
   "Resources": {
@@ -247,6 +252,13 @@
                       "Ref": "SecretoJwtArn"
                     }
                   ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "ses:SendEmail",
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${CorreoRemitente}"
+                  }
                 }
               ]
             }

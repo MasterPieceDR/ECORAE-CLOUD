@@ -33,11 +33,14 @@ async def test_perfil_con_permisos_heredados(actores):
     assert {"codigo": "EVALUACION.REGISTRAR", "centro": "E1"} in p["permisos"]
 
 
-async def test_registro_y_asignacion_de_rol_con_segregacion(cliente, actores):
+async def test_registro_y_asignacion_de_rol_con_segregacion(cliente, actores, monkeypatch):
+    codigos = []
+    monkeypatch.setattr("app.correo.enviar_codigo", lambda correo, codigo: codigos.append(codigo))
     r = await cliente.post("/auth/registro", json={"alias": "ana.prueba", "correo": "ana@ejemplo.invalid", "password": "Clave-segura-1",
                                                    "organizacion": "GEN-MUNI"})
     assert r.status_code == 201, r.text
-    nuevo = r.json()["usuario"]
+    assert (await cliente.post("/auth/verificar", json={"correo": "ana@ejemplo.invalid", "codigo": codigos[-1]})).status_code == 200
+    nuevo = (await cliente.post("/auth/login", json={"correo": "ana@ejemplo.invalid", "password": "Clave-segura-1"})).json()["usuario"]
     assert nuevo["roles_efectivos"] == ["USUARIO_BASE"]
     admin = actores["admin"]
     assert (await admin.post(f"/usuarios/{nuevo['uid']}/roles", {"rol": "GENERADOR", "motivo": "Responsable del punto limpio"})).status_code == 201
@@ -269,10 +272,13 @@ async def test_editor_de_escenarios(actores):
 
 
 # ---------------------------------------------------------------- solicitud de rol del autorregistro
-async def test_solicitud_de_rol(cliente, actores):
+async def test_solicitud_de_rol(cliente, actores, monkeypatch):
+    codigos = []
+    monkeypatch.setattr("app.correo.enviar_codigo", lambda correo, codigo: codigos.append(codigo))
     r = await cliente.post("/auth/registro", json={"alias": "luis.prueba", "correo": "luis@ejemplo.invalid", "password": "Clave-segura-2",
                                                    "organizacion": "GEN-MUNI"})
     assert r.status_code == 201, r.text
+    assert (await cliente.post("/auth/verificar", json={"correo": "luis@ejemplo.invalid", "codigo": codigos[-1]})).status_code == 200
     login = await cliente.post("/auth/login", json={"correo": "luis@ejemplo.invalid", "password": "Clave-segura-2"})
     from conftest import Actor
     luis = Actor(cliente, "luis.prueba", login.json()["access_token"])

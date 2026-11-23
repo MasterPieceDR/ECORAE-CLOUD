@@ -5,6 +5,8 @@ export const api = {
   // identidad
   login: (correo, password) => http.post('/auth/login', { correo, password }),
   registro: (datos) => http.post('/auth/registro', datos),
+  verificarCorreo: (correo, codigo) => http.post('/auth/verificar', { correo, codigo }),
+  reenviarCodigo: (correo) => http.post('/auth/reenviar-codigo', { correo }),
   me: () => http.get('/auth/me'),
   cuentasDemo: () => http.get('/auth/demo'),
   organizacionesPublicas: () => http.get('/auth/organizaciones'),

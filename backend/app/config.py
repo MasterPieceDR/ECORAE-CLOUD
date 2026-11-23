@@ -45,6 +45,15 @@ class Config(BaseSettings):
     aws_endpoint_url: str | None = None
     aws_endpoint_url_publica: str | None = None
 
+    # Correo transaccional
+    correo_modo: str = "consola"
+    correo_remitente: str = "no-reply@ecoraee.invalid"
+    correo_smtp_host: str = "localhost"
+    correo_smtp_puerto: int = 1025
+    correo_smtp_starttls: bool = False
+    correo_smtp_usuario: str = ""
+    correo_smtp_clave: str = ""
+
     # Web
     cors_origenes: str = "http://localhost:5171,http://127.0.0.1:5171"
 

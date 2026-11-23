@@ -47,7 +47,7 @@ export function AuthProvider({ children }) {
     can: crearCan(user),
     tieneRol: (r) => (user?.roles_efectivos ?? []).includes(r),
     login: async (correo, password) => entrar(await api.login(correo, password)),
-    registrar: async (datos) => entrar(await api.registro(datos)),
+    registrar: async (datos) => api.registro(datos),
     refrescar: async () => setUser(await api.me()),
     logout: async () => { token.set(null); setUser(null); setCatalogos(null); },
   }), [user]); // eslint-disable-line react-hooks/exhaustive-deps

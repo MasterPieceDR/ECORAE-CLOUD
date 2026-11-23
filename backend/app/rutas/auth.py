@@ -1,10 +1,14 @@
 """Inicio de sesión, registro y perfil."""
 from __future__ import annotations
 
+import secrets
+
+import asyncpg
 from fastapi import APIRouter, Depends, Request
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
-from .. import db
+from .. import db, correo
 from ..config import config
 from ..errores import ErrorAPI
 from ..seguridad import Sesion, controlar_intentos, crear_token, huella_ip, registrar_fallo, sesion
@@ -59,6 +63,10 @@ async def login(datos: LoginIn, request: Request):
     async with db.sin_contexto() as conn:
         uid = await conn.fetchval("SELECT api.fn_autenticar_local($1, $2, $3)", datos.correo, datos.password, ip)
     if not uid:
+        async with db.sin_contexto() as conn:
+            pendiente = await conn.fetchval("SELECT api.fn_login_pendiente($1, $2)", datos.correo, datos.password)
+        if pendiente:
+            raise ErrorAPI(403, "Verifica tu correo antes de iniciar sesión", "VERIFICACION_PENDIENTE")
         registrar_fallo(ip)
         raise ErrorAPI(401, "Correo o contraseña incorrectos", "EC401")
     return await _respuesta_sesion(uid, request)
@@ -71,10 +79,48 @@ async def registro(datos: RegistroIn, request: Request):
     ip = huella_ip(request)
     controlar_intentos(ip)
     registrar_fallo(ip)                       # cada registro cuenta: limita la creación masiva de cuentas
+    codigo = f"{secrets.randbelow(1000000):06d}"
+    enviar = False
+    try:
+        async with db.sin_contexto() as conn:
+            await conn.fetchval("SELECT api.fn_registrar_cuenta($1, $2, $3, $4)",
+                                datos.alias.strip().lower(), datos.correo.strip(), datos.password, datos.organizacion)
+            enviar = await conn.fetchval("SELECT api.fn_enviar_codigo($1, $2)", datos.correo, codigo)
+    except asyncpg.PostgresError as exc:
+        if exc.sqlstate not in ("EC409", "23505"):
+            raise
+    if enviar:
+        await run_in_threadpool(correo.enviar_codigo, datos.correo.strip(), codigo)
+    return {"estado": "PENDIENTE_VERIFICACION", "mensaje": "Si corresponde, recibirás un código de verificación."}
+
+
+class CorreoIn(BaseModel):
+    correo: str = Field(min_length=5, max_length=160)
+
+
+class VerificarIn(CorreoIn):
+    codigo: str = Field(pattern=r"^[0-9]{6}$")
+
+
+@router.post("/verificar")
+async def verificar(datos: VerificarIn, request: Request):
+    controlar_intentos(huella_ip(request))
     async with db.sin_contexto() as conn:
-        uid = await conn.fetchval("SELECT api.fn_registrar_cuenta($1, $2, $3, $4)",
-                                  datos.alias.strip().lower(), datos.correo.strip(), datos.password, datos.organizacion)
-    return await _respuesta_sesion(uid, request)
+        correcto = await conn.fetchval("SELECT api.fn_verificar_correo($1,$2)", datos.correo, datos.codigo)
+    if not correcto:
+        raise ErrorAPI(422, "Código inválido, vencido o sin intentos disponibles. Solicita uno nuevo.", "CODIGO_INVALIDO")
+    return {"mensaje": "Correo verificado. Ya puedes iniciar sesión."}
+
+
+@router.post("/reenviar-codigo")
+async def reenviar_codigo(datos: CorreoIn, request: Request):
+    controlar_intentos(huella_ip(request))
+    codigo = f"{secrets.randbelow(1000000):06d}"
+    async with db.sin_contexto() as conn:
+        enviar = await conn.fetchval("SELECT api.fn_enviar_codigo($1,$2)", datos.correo, codigo)
+    if enviar:
+        await run_in_threadpool(correo.enviar_codigo, datos.correo.strip(), codigo)
+    return {"mensaje": "Si corresponde, recibirás un código. Espera 60 segundos entre solicitudes; máximo 5 envíos por hora."}
 
 
 @router.get("/organizaciones")

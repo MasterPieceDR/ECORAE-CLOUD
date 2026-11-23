@@ -65,3 +65,7 @@ Al cambiar parámetros del Launch Template o el ZIP, actualice la clave del ZIP,
 ## Destrucción
 
 Respaldar y autorizar la eliminación de datos antes de vaciar buckets versionados (incluidos delete markers). Borre primero stacks en orden `observabilidad`, `cdn`, `computo`, `almacenamiento`, `datos`, `seguridad`, `red`, esperando `aws cloudformation wait stack-delete-complete --stack-name NOMBRE` en cada uno. RDS deja snapshot final por `DeletionPolicy`; S3 y snapshot siguen facturando y se eliminan explícitamente desde consola o CLI después de verificarlos. Borre también el artefacto y su bucket si son exclusivos del laboratorio. CloudFront puede tardar en deshabilitarse. Revise CloudTrail, presupuestos, secretos pendientes de eliminación y recursos retenidos.
+
+
+### Correo de verificación
+Configure `CorreoModo=ses` y el mismo `CorreoRemitente` en las plantillas 02 y 05; verifique esa identidad en SES de la región. El rol de instancia solo permite enviar desde esa identidad. En el sandbox de SES también deben verificarse los destinatarios y se aplican cuotas reducidas; solicite acceso de producción para enviar a destinatarios no verificados. AWS Academy Learner Lab puede restringir SES, IAM y salida de red; confirme los servicios habilitados y use Mailpit local cuando SES no esté disponible. Si se usa LabRole, sus permisos dependen del laboratorio y CloudFormation no puede modificarlos.
