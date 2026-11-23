@@ -48,4 +48,7 @@ SELECT to_regclass('seg.solicitud_rol') IS NULL AS falta13,
   \i /database/18_historial_recoleccion.sql
   COMMIT;
 \endif
+BEGIN;
+\i /database/19_produccion.sql
+COMMIT;
 \echo 'La base está al día.'

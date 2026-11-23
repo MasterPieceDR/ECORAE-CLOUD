@@ -12,3 +12,4 @@ psql -d ecoraee -v ON_ERROR_STOP=1 -q -1 -f 16_rendimiento.sql && echo "ok 16_re
 psql -d ecoraee -v ON_ERROR_STOP=1 -q -1 -f 17_catalogo_serie_imagenes.sql && echo "ok 17_catalogo_serie_imagenes.sql"
 psql -d ecoraee -v ON_ERROR_STOP=1 -q -1 -f 17b_api_catalogo.sql && echo "ok 17b_api_catalogo.sql"
 psql -d ecoraee -v ON_ERROR_STOP=1 -q -1 -f 18_historial_recoleccion.sql && echo "ok 18_historial_recoleccion.sql"
+psql -d ecoraee -v ON_ERROR_STOP=1 -q -1 -f 19_produccion.sql && echo "ok 19_produccion.sql"

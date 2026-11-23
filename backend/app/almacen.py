@@ -28,9 +28,9 @@ def nueva_clave(prefijo: str, mime: str) -> str:
     return f"{prefijo}/{hoy:%Y/%m}/{uuid.uuid4().hex}{EXT.get(mime, '.bin')}"
 
 
-def _s3():
+def _s3(para_firmar: bool = False):
     import boto3
-    return boto3.client("s3", region_name=config().aws_region, endpoint_url=config().aws_endpoint_url)
+    return boto3.client("s3", region_name=config().aws_region, endpoint_url=(config().aws_endpoint_url_publica if para_firmar and config().aws_endpoint_url_publica else config().aws_endpoint_url))
 
 
 def _firma(metodo: str, bucket: str, clave: str, expira: int) -> str:
@@ -112,14 +112,14 @@ class AlmacenLocal:
 
 class AlmacenS3:
     def url_subida(self, bucket: str, clave: str, mime: str, ttl: int = 900) -> dict:
-        url = _s3().generate_presigned_url("put_object", Params={"Bucket": bucket, "Key": clave, "ContentType": mime}, ExpiresIn=ttl)
+        url = _s3(para_firmar=True).generate_presigned_url("put_object", Params={"Bucket": bucket, "Key": clave, "ContentType": mime}, ExpiresIn=ttl)
         return {"url": url, "metodo": "PUT", "cabeceras": {"Content-Type": mime}}
 
     def url_descarga(self, bucket: str, clave: str, ttl: int = 300, nombre: str | None = None) -> str:
         params = {"Bucket": bucket, "Key": clave}
         if nombre:
             params["ResponseContentDisposition"] = f'inline; filename="{nombre}"'
-        return _s3().generate_presigned_url("get_object", Params=params, ExpiresIn=ttl)
+        return _s3(para_firmar=True).generate_presigned_url("get_object", Params=params, ExpiresIn=ttl)
 
     def verificar_objeto(self, bucket: str, clave: str, sha256: str, tamano: int, mime: str) -> bool:
         try:

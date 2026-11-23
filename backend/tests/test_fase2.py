@@ -223,7 +223,9 @@ async def test_prediccion_endpoint(actores):
         assert r.status_code == 200, r.text
         datos = r.json()
         assert datos["disponible"], datos
-        assert len(datos["historia"]) >= 52 and len(datos["pronostico"]) == 4
+        assert len(datos["historia"]) == 52 and len(datos["pronostico"]) == 4
+        assert datos["fuente_modelo"] == "RED_HISTORICO"
+        assert "sintético" in datos["nota"]
         assert datos["pronostico"][0]["inferior"] <= datos["pronostico"][0]["valor"] <= datos["pronostico"][0]["superior"]
     r = await actores["gen.universidad"].get("/prediccion/recoleccion")
     assert r.status_code == 403
@@ -240,49 +242,83 @@ async def test_prediccion_fallo_aislado(actores, monkeypatch):
     assert (await actores["coordinador"].get("/tablero")).status_code == 200
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_prediccion_rellena_semanas_sin_datos(actores):
+async def test_prediccion_fuentes_huecos_y_semana_actual(actores):
     import os
     import psycopg2
-    from datetime import timedelta
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
 
+    hoy = datetime.now(ZoneInfo("America/Guayaquil")).date()
+    actual = hoy - timedelta(days=hoy.weekday())
     with psycopg2.connect(dbname=os.getenv("DB_NOMBRE", "ecoraee"), host=os.getenv("PGHOST", "localhost"),
                           user=os.getenv("PGUSER", "ecoraee_admin"), password=os.getenv("PGPASSWORD")) as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, codigo FROM cat.categoria_raee WHERE categoria_padre_id IS NULL ORDER BY id LIMIT 1")
+            cur.execute("SELECT id, codigo FROM cat.categoria_raee WHERE nivel=2 ORDER BY id LIMIT 1")
             categoria_id, codigo = cur.fetchone()
-            cur.execute("SELECT max(semana) FROM api.v1_serie_recoleccion WHERE categoria=%s", (codigo,))
-            ultima = cur.fetchone()[0]
-            primera, hueco, tercera = (ultima + timedelta(weeks=i) for i in (2, 3, 4))
-            cur.executemany("INSERT INTO ind.historial_recoleccion_semanal (semana, categoria_id, equipos, peso_kg) VALUES (%s, %s, %s, %s)",
-                            [(primera, categoria_id, 7, 14), (tercera, categoria_id, 9, 18)])
+            hueco = actual - timedelta(weeks=3)
+            cur.execute("SELECT equipos, peso_kg FROM ind.historial_recoleccion_semanal WHERE categoria_id=%s AND semana=%s", (categoria_id, hueco))
+            original = cur.fetchone()
+            cur.execute("DELETE FROM ind.historial_recoleccion_semanal WHERE categoria_id=%s AND semana=%s", (categoria_id, hueco))
+            cur.execute("INSERT INTO ind.historial_recoleccion_semanal VALUES (%s,%s,999,999,true)", (actual, categoria_id))
         conn.commit()
         try:
             r = await actores["coordinador"].get("/prediccion/recoleccion", params={"categoria": codigo})
-            assert r.status_code == 200 and r.json()["disponible"]
-            historia = {x["semana"]: x for x in r.json()["historia"]}
-            assert historia[primera.isoformat()]["valor"] == 7
-            assert historia[hueco.isoformat()] == {"semana": hueco.isoformat(), "valor": 0, "sintetico": False}
-            assert historia[tercera.isoformat()]["valor"] == 9
+            datos = r.json()
+            assert r.status_code == 200 and datos["disponible"]
+            assert datos["fuente_modelo"] == "RED_HISTORICO"
+            historia = {x["semana"]: x["valor"] for x in datos["historia"]}
+            assert historia[hueco.isoformat()] == 0
+            assert actual.isoformat() not in historia
+            assert datos["pronostico"][0]["semana"] == actual.isoformat()
+            assert all(x["semana"] <= actual.isoformat() for x in datos["plataforma"])
         finally:
             with conn.cursor() as cur:
-                cur.execute("DELETE FROM ind.historial_recoleccion_semanal WHERE categoria_id=%s AND semana IN (%s, %s)", (categoria_id, primera, tercera))
+                cur.execute("DELETE FROM ind.historial_recoleccion_semanal WHERE categoria_id=%s AND semana=%s", (categoria_id, actual))
+                cur.execute("INSERT INTO ind.historial_recoleccion_semanal VALUES (%s,%s,%s,%s,true)", (hueco, categoria_id, *original))
             conn.commit()
 
 
-def test_serie_prefiere_recepciones_reales(base_de_datos):
+def test_serie_separa_fuentes_y_categorias(base_de_datos):
     import os
     import psycopg2
 
     with psycopg2.connect(dbname=os.getenv("DB_NOMBRE", "ecoraee"), host=os.getenv("PGHOST", "localhost"),
                           user=os.getenv("PGUSER", "ecoraee_admin"), password=os.getenv("PGPASSWORD")) as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT semana, categoria, equipos, peso_kg FROM api.v1_serie_recoleccion WHERE NOT sintetico LIMIT 1")
+            cur.execute("""SELECT c.codigo, count(h.semana) FROM cat.categoria_raee c
+                           LEFT JOIN ind.historial_recoleccion_semanal h ON h.categoria_id=c.id AND h.sintetico
+                           WHERE c.nivel=2 GROUP BY c.codigo""")
+            assert all(n == 52 for _, n in cur.fetchall())
+            cur.execute("SELECT semana, categoria, equipos, peso_kg FROM api.v1_serie_recoleccion WHERE fuente='PLATAFORMA' LIMIT 1")
             semana, categoria, equipos, peso = cur.fetchone()
-            cur.execute("SELECT id FROM cat.categoria_raee WHERE codigo=%s", (categoria,))
+            cur.execute("SELECT id FROM cat.categoria_raee WHERE codigo=%s AND nivel=2", (categoria,))
             categoria_id = cur.fetchone()[0]
             cur.execute("""INSERT INTO ind.historial_recoleccion_semanal (semana, categoria_id, equipos, peso_kg, sintetico)
                            VALUES (%s, %s, 999999, 999999, true)
                            ON CONFLICT (semana, categoria_id) DO UPDATE SET equipos=999999, peso_kg=999999, sintetico=true""", (semana, categoria_id))
-            cur.execute("SELECT equipos, peso_kg, sintetico FROM api.v1_serie_recoleccion WHERE semana=%s AND categoria=%s", (semana, categoria))
-            assert cur.fetchall() == [(equipos, peso, False)]
+            cur.execute("SELECT fuente, equipos, peso_kg FROM api.v1_serie_recoleccion WHERE semana=%s AND categoria=%s ORDER BY fuente", (semana, categoria))
+            assert cur.fetchall() == [('PLATAFORMA', equipos, peso), ('RED_HISTORICO', 999999, 999999)]
+            cur.execute("""SELECT count(*) FROM api.v1_serie_recoleccion v JOIN cat.categoria_raee c ON c.codigo=v.categoria WHERE c.nivel <> 2""")
+            assert cur.fetchone()[0] == 0
+        conn.rollback()
+
+
+def test_script_historial_se_puede_reaplicar(base_de_datos):
+    import os
+    import psycopg2
+    from pathlib import Path
+
+    script = (Path(__file__).resolve().parents[2] / "database" / "18_historial_recoleccion.sql").read_text(encoding="utf-8")
+    with psycopg2.connect(dbname=os.getenv("DB_NOMBRE", "ecoraee"), host=os.getenv("PGHOST", "localhost"),
+                          user=os.getenv("PGUSER", "ecoraee_admin"), password=os.getenv("PGPASSWORD")) as conn:
+        with conn.cursor() as cur:
+            cur.execute("""INSERT INTO ind.historial_recoleccion_semanal
+                           SELECT current_date, id, 99, 99, true FROM cat.categoria_raee WHERE nivel=1""")
+            cur.execute(script)
+            cur.execute("""SELECT count(*) FROM ind.historial_recoleccion_semanal h
+                           JOIN cat.categoria_raee c ON c.id=h.categoria_id WHERE h.sintetico AND c.nivel <> 2""")
+            assert cur.fetchone()[0] == 0
+            cur.execute("""SELECT count(*) FROM cat.categoria_raee c WHERE c.nivel=2 AND
+                           (SELECT count(*) FROM ind.historial_recoleccion_semanal h WHERE h.categoria_id=c.id AND h.sintetico) <> 52""")
+            assert cur.fetchone()[0] == 0
         conn.rollback()

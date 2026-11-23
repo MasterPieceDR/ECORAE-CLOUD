@@ -137,19 +137,25 @@ function Proyeccion() {
   const [categoria, setCategoria] = useState(''), [semanas, setSemanas] = useState('8'), [medida, setMedida] = useState('equipos');
   const { data, error, loading } = useAsync(() => permitido ? api.prediccion({ categoria, semanas, medida }) : Promise.resolve(null), [permitido, categoria, semanas, medida]);
   const option = useMemo(() => {
-    const h = data?.historia ?? [], p = data?.pronostico ?? [], ultimo = h.at(-1)?.valor;
-    return { tooltip: { trigger: 'axis' }, legend: { textStyle: { color: '#9EB4A7' }, data: ['Historia', 'Pronóstico'] }, grid: { left: 55, right: 20, bottom: 45 },
-      xAxis: { type: 'category', data: [...h.map((x) => x.semana), ...p.map((x) => x.semana)] }, yAxis: { type: 'value' },
-      series: [{ name: 'Historia', type: 'line', showSymbol: false, data: [...h.map((x) => x.valor), ...p.map(() => null)] },
-        { name: 'Pronóstico', type: 'line', showSymbol: false, lineStyle: { type: 'dashed' }, data: [...h.slice(0,-1).map(() => null), ultimo, ...p.map((x) => x.valor)] },
-        { name: 'Límite inferior', type: 'line', stack: 'banda', symbol: 'none', lineStyle: { opacity: 0 }, data: [...h.map(() => null), ...p.map((x) => x.inferior)] },
-        { name: 'Banda 80 %', type: 'line', stack: 'banda', symbol: 'none', lineStyle: { opacity: 0 }, areaStyle: { opacity: .18 }, data: [...h.map(() => null), ...p.map((x) => x.superior - x.inferior)] }] };
+    const h = data?.historia ?? [], p = data?.pronostico ?? [], plataforma = data?.plataforma ?? [];
+    const fechas = [...new Set([...h, ...p, ...plataforma].map((x) => x.semana))].sort();
+    const valores = (serie) => Object.fromEntries(serie.map((x) => [x.semana, x.valor]));
+    const historia = valores(h), pronostico = valores(p), registradas = valores(plataforma);
+    const ultimo = h.at(-1);
+    const porFecha = Object.fromEntries(p.map((x) => [x.semana, x]));
+    return { tooltip: { trigger: 'axis' }, legend: { textStyle: { color: '#9EB4A7' }, data: ['Historia', 'Pronóstico', 'Banda 80 %', ...(plataforma.length ? ['Registradas en la plataforma'] : [])] }, grid: { left: 55, right: 20, bottom: 45 },
+      xAxis: { type: 'category', data: fechas }, yAxis: { type: 'value' },
+      series: [{ name: 'Historia', type: 'line', showSymbol: false, data: fechas.map((f) => historia[f] ?? null) },
+        { name: 'Pronóstico', type: 'line', showSymbol: false, lineStyle: { type: 'dashed' }, data: fechas.map((f) => pronostico[f] ?? (f === ultimo?.semana ? ultimo.valor : null)) },
+        { name: 'Límite inferior', type: 'line', stack: 'banda', symbol: 'none', lineStyle: { opacity: 0 }, data: fechas.map((f) => porFecha[f]?.inferior ?? null) },
+        { name: 'Banda 80 %', type: 'line', stack: 'banda', symbol: 'none', lineStyle: { opacity: 0 }, areaStyle: { opacity: .18 }, data: fechas.map((f) => porFecha[f] ? porFecha[f].superior - porFecha[f].inferior : null) },
+        ...(plataforma.length ? [{ name: 'Registradas en la plataforma', type: 'bar', barMaxWidth: 12, data: fechas.map((f) => registradas[f] ?? null) }] : [])] };
   }, [data]);
   if (!permitido) return null;
-  return <section className="card"><h2 className="dash__h2">Proyección de recolección</h2><div className="filters">
-    <label className="field">Categoría<select value={categoria} onChange={(e) => setCategoria(e.target.value)}><option value="">Todas</option>{c.categorias.filter((x) => !x.padre).map((x) => <option key={x.codigo} value={x.codigo}>{x.nombre}</option>)}</select></label>
+  return <section className="card"><h2 className="dash__h2">Proyección de recolección</h2><div className="proyeccion-filters">
+    <label className="field">Categoría<select value={categoria} onChange={(e) => setCategoria(e.target.value)}><option value="">Todas</option>{c.categorias.filter((x) => x.nivel === 2).map((x) => <option key={x.codigo} value={x.codigo}>{x.nombre}</option>)}</select></label>
     <label className="field">Horizonte<select value={semanas} onChange={(e) => setSemanas(e.target.value)}>{[4,8,12].map((x) => <option key={x} value={x}>{x} semanas</option>)}</select></label>
     <label className="field">Medida<select value={medida} onChange={(e) => setMedida(e.target.value)}><option value="equipos">Equipos</option><option value="peso">Kilogramos</option></select></label></div>
-    {loading ? <p>Cargando proyección...</p> : error || !data?.disponible ? <p role="status">{error?.message ?? data?.nota}</p> : <><Chart label="Historia y proyección de recolección con banda de confianza del 80 por ciento" option={option} /><p className="hint">{data.nota} {data.mape == null ? 'No se pudo calcular el error porcentual.' : `El error medio en las últimas cuatro semanas fue ${data.mape} %.`}</p></>}
+    {loading ? <p>Cargando proyección...</p> : error || !data?.disponible ? <p role="status">{error?.message ?? data?.nota}</p> : <><Chart label="Historia y proyección de recolección con banda de confianza del 80 por ciento" option={option} /><p className="hint">{data.nota} {data.mape == null ? 'No se pudo calcular el error porcentual.' : `Al comparar el pronóstico con las últimas cuatro semanas completas, el error porcentual medio fue ${data.mape} %.`}</p></>}
   </section>;
 }

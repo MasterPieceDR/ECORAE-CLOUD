@@ -206,3 +206,24 @@ URL prefirmadas (el navegador sube directo a S3; por eso el bucket necesita CORS
 - Crear `/innovation/README.md` y `/evidence/README.md` con la estructura de carpetas que exige el enunciado (sección 8.2)
   y el índice de evidencias por requisito (10.5), sin inventar resultados.
 - Actualizar `README.md` raíz con la nueva estructura y cómo ejecutar todo.
+
+---
+
+## TAREA 4 — Verificación del correo al registrarse
+
+- **Flujo:** `POST /auth/registro` crea la cuenta en estado `PENDIENTE_VERIFICACION` (sin poder iniciar sesión) y envía
+  un código de 6 dígitos; `POST /auth/verificar {correo, codigo}` la activa con el rol base; `POST /auth/reenviar-codigo`
+  manda uno nuevo. El login de una cuenta pendiente responde con un mensaje que lleva a la pantalla de verificación.
+- **Reglas en la base** (script nuevo `database/20_verificacion_correo.sql`): el código se guarda con hash (bcrypt o
+  SHA-256 con sal), vence a los 15 minutos, admite 5 intentos, el reenvío exige 60 s desde el anterior y un máximo de
+  5 por hora; cada envío, intento y activación queda auditado. Las respuestas no revelan si un correo ya existe.
+- **Envío desacoplado** (`backend/app/correo.py`, mismo patrón que el almacén): `CORREO_MODO=consola|smtp|ses`.
+  El envío ocurre después del commit y un fallo de envío no deja la cuenta inconsistente (se puede reenviar).
+  - Local y producción local: **Mailpit** en Docker (SMTP 1025, bandeja web en http://localhost:8025).
+  - AWS: **Amazon SES** (`CORREO_MODO=ses`, remitente verificado, permiso `ses:SendEmail` solo para esa identidad en el
+    rol de EC2) o SMTP genérico. Documentar el *sandbox* de SES y la limitación de Learner Lab.
+- **Frontend:** paso «Verifica tu correo» tras registrarse (6 casillas o un campo numérico, reenviar con cuenta
+  regresiva, mensajes claros) y acceso a esa pantalla desde el login si la cuenta está pendiente.
+- **Plantilla del correo:** texto plano + HTML simple en español, sin enlaces de seguimiento ni datos innecesarios.
+- **Pruebas:** registro → pendiente → login rechazado → código incorrecto (intentos) → código vencido → reenvío con
+  límite → código correcto → login OK. Las cuentas sintéticas existentes siguen activas.

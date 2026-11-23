@@ -15,10 +15,13 @@ if [[ ${1:-} == --datos ]]; then
   pg_dump --data-only --no-owner --no-privileges "$DATABASE_LOCAL_URL" | psql -v ON_ERROR_STOP=1 --single-transaction
   exit
 fi
+: "${ADMIN_CORREO:?}" "${ADMIN_ALIAS:?}" "${ADMIN_CLAVE:?Debe proporcionar una clave de al menos 16 caracteres}"
 cd "$root/database"
-for f in 01_estructura.sql 02_logica.sql 03_api_mcp.sql 04_seguridad_indices_diccionario.sql 05_semillas.sql 10_integracion.sql 13_mejoras.sql 14_dispositivos.sql 15_verificacion.sql 16_rendimiento.sql 17_catalogo_serie_imagenes.sql 17b_api_catalogo.sql 18_historial_recoleccion.sql; do
+for f in 01_estructura.sql 02_logica.sql 03_api_mcp.sql 04_seguridad_indices_diccionario.sql 05_semillas.sql 10_integracion.sql 13_mejoras.sql 14_dispositivos.sql 15_verificacion.sql 16_rendimiento.sql 17_catalogo_serie_imagenes.sql 17b_api_catalogo.sql 18_historial_recoleccion.sql 19_produccion.sql; do
   if [[ -f "$f" ]]; then psql -v ON_ERROR_STOP=1 -f "$f"; else echo "No existe $f; revisar la versión de la base" >&2; exit 1; fi
 done
 printf '\\getenv api_pass API_PASS\n\\getenv mcp_pass MCP_PASS\n\\i 11_logins_servicio.sql\n' | psql -v ON_ERROR_STOP=1
 if [[ ${DEMO:-false} == true ]]; then psql -v ON_ERROR_STOP=1 -f 12_datos_demo.sql; fi
-unset PGPASSWORD API_PASS MCP_PASS
+export ADMIN_CORREO ADMIN_ALIAS ADMIN_CLAVE CLAVE_DEMO="${CLAVE_DEMO:-}"
+printf "\\getenv correo ADMIN_CORREO\n\\getenv alias ADMIN_ALIAS\n\\getenv clave ADMIN_CLAVE\n\\getenv demo CLAVE_DEMO\nSELECT seg.fn_preparar_produccion(:'correo', :'alias', :'clave', nullif(:'demo',''));\n" | psql -v ON_ERROR_STOP=1
+unset PGPASSWORD API_PASS MCP_PASS ADMIN_CLAVE CLAVE_DEMO

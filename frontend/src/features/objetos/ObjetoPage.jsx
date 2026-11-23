@@ -165,7 +165,7 @@ function Galeria({ objeto }) {
   return <section className="card"><h2 className="detail__h2">Fotos del equipo ({data?.length ?? 0}/5)</h2>
     {error && <p role="alert" className="error">{error.message}</p>}{fallo && <p role="alert" className="error">{fallo}</p>}
     <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>{data?.map((f, i) => <button type="button" key={f.uid} className="btn btn--ghost" onClick={() => setVista(f)} aria-label={`Ampliar foto ${i+1}`}><img src={f.url} alt="" style={{width:100,height:80,objectFit:'cover'}} /></button>)}</div>
-    {data && data.length < 5 && <label className="field">Subir fotografía JPEG, PNG o WEBP<input type="file" accept="image/jpeg,image/png,image/webp" onChange={subir} disabled={progreso !== null} /></label>}
+    {data && data.length < 5 && <label className="btn btn--ghost file-button">Subir fotografía<input className="sr" aria-label="Subir fotografía JPEG, PNG o WEBP" type="file" accept="image/jpeg,image/png,image/webp" onChange={subir} disabled={progreso !== null} /></label>}
     {progreso !== null && <progress max="100" value={progreso} aria-label="Progreso de subida" />}
     {vista && <Modal title="Fotografía ampliada" onClose={() => setVista(null)}><img src={vista.url} alt="Fotografía ampliada del equipo" style={{display:'block',maxWidth:'100%',maxHeight:'70vh'}} /></Modal>}
   </section>;

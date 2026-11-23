@@ -58,7 +58,7 @@ JWT_SECRETO=...
 
 ### Cuentas de demostración
 
-En la pantalla de inicio de sesión hay un botón por rol. Todas usan la contraseña `EcoRAEE-2026` y el correo
+En la pantalla de inicio de sesión hay un botón por rol. La contraseña se muestra en esa pantalla únicamente con `DEMO=true` en desarrollo; el correo
 `<alias>@ejemplo.invalid`, por ejemplo `coordinador@ejemplo.invalid`.
 
 | Alias | Rol | Qué tiene pendiente en los datos demo |
@@ -186,3 +186,15 @@ Luego configura el cliente MCP con el servidor `http://localhost:8001/mcp` y la 
 ## Despliegue en AWS
 
 La preparación para laboratorio está en [infrastructure/](infrastructure/README.md): siete stacks CloudFormation, IAM y scripts de migración y publicación. [La guía](docs/aws/GUIA_DESPLIEGUE.md) describe la secuencia y la evidencia propuesta; [costos](docs/aws/costos.md) contiene una estimación. El despliegue usa dos AZ, EC2 privada y RDS, y requiere completar parámetros, permisos y la inicialización de la base. `docker-compose.aws.yml` ofrece ejecución de API/MCP contra servicios AWS; copiar `.env.aws.example` a `.env.aws` y aportar solo identificadores, nunca credenciales. Los diagramas están en `docs/aws/`, las decisiones en `docs/adr/` y los índices provisionales en `innovation/` y `evidence/`.
+
+## Versión de producción en local
+
+Genere secretos una sola vez con `pwsh -File scripts/generar_env_produccion.ps1` (o `bash scripts/generar_env_produccion.sh`). Edite el correo y alias del administrador en `.env.produccion` si es necesario y proteja ese archivo y los archivos `.env.produccion.*` generados para cada servicio. Los volúmenes existentes conservan sus contraseñas: no regenere el archivo sin rotarlas también en los servicios.
+
+```sh
+docker compose -f docker-compose.produccion.yml up -d --build
+docker compose -f docker-compose.produccion.yml run --rm --no-deps --env-from-file .env.produccion -e DB_ADMIN_HOST=db -e DB_ADMIN_NOMBRE=ecoraee -e DB_ADMIN_USUARIO=ecoraee_admin api sh -c 'DB_ADMIN_CLAVE="$POSTGRES_PASSWORD" python -m app.cli preparar-produccion'
+docker compose -f docker-compose.produccion.yml exec api python -m app.cli inicializar
+```
+
+Abra http://localhost:8090 e ingrese con `ADMIN_CORREO` y `ADMIN_CLAVE` del archivo. `CLAVE_DEMO` es opcional y activa cuentas sintéticas para evaluación. En Windows también están disponibles `iniciar_produccion_local.bat` y `detener_produccion_local.bat`. Para detener sin borrar datos: `docker compose -f docker-compose.produccion.yml down`. LocalStack emula S3 en el puerto 4566 de localhost y configura buckets privados con CORS para la web. Las credenciales `test/test` se usan solo con este emulador; en AWS real la API utiliza las credenciales del rol de instancia. La base y la API no publican puertos. Los datos de LocalStack son efímeros y se recrean al levantar el servicio.

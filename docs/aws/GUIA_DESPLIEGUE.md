@@ -46,7 +46,14 @@ Diagramas editables: [arquitectura.mmd](arquitectura.mmd) e [iam.mmd](iam.mmd). 
 - Un correo para las alarmas (hay que confirmar la suscripción SNS que llega por correo).
 - Docker Desktop y Node 22 en la PC para compilar el frontend.
 
-## 3. Secuencia de despliegue
+## 3. Ensayo en local antes de AWS
+
+`docker-compose.produccion.yml` reproduce en la PC la configuración de AWS (`ENTORNO=produccion`, `DEMO=false`, S3 con
+LocalStack, nginx con las cabeceras de CloudFront). Ejecuta `iniciar_produccion_local.bat` y comprueba en
+http://localhost:8090 lo mismo que comprobarás en AWS. El resultado del ensayo está en
+[docs/informes/2026-11-23_produccion-local-y-credenciales.md](../informes/2026-11-23_produccion-local-y-credenciales.md).
+
+## 4. Secuencia de despliegue
 
 | Paso | Qué se hace | Cómo se comprueba |
 |---|---|---|
@@ -57,7 +64,7 @@ Diagramas editables: [arquitectura.mmd](arquitectura.mmd) e [iam.mmd](iam.mmd). 
 | 5 | Stack `almacenamiento` (buckets con bloqueo público, cifrado, versionado y CORS) | Pestaña Permisos de cada bucket |
 | 6 | Stack `computo` (Launch Template, ALB, target group, ASG) | Target group: instancias `healthy` (tras el paso 8) |
 | 7 | Stack `cdn` (CloudFront con OAC y origen `/api/*`) y redepliegue de `almacenamiento` y `computo` con el dominio real de CloudFront como `OrigenWeb` | `https://<dominio>/` carga la web |
-| 8 | Migrar la base: `infrastructure/scripts/migrar_base.sh` desde una sesión privada (crea los scripts 01–18 y los logins de servicio). Para la demo, `DEMO=true` carga las cuentas sintéticas | `https://<dominio>/api/v1/verificacion/conexion` responde `PostgreSQL 16` |
+| 8 | Migrar la base: `infrastructure/scripts/migrar_base.sh` desde una sesión privada (scripts 01–19, logins de servicio y preparación de producción: cuentas sintéticas sin credencial y administrador inicial con clave aleatoria). Para la evaluación, `CLAVE_DEMO=<clave aleatoria>` activa las cuentas sintéticas con esa clave, que se entrega al docente por un canal privado | `https://<dominio>/api/v1/verificacion/conexion` responde `PostgreSQL 16` y el login con la clave del repositorio da 401 |
 | 9 | `docker exec ecoraee-api python -m app.cli inicializar` (por Session Manager) para calcular la red E0–E4 | Dashboard muestra la capacidad de la red |
 | 10 | Stack `observabilidad` (log group, alarmas, SNS, CloudTrail, Budgets) y confirmar el correo | Alarmas en estado `OK` |
 | 11 | Publicar el frontend: `infrastructure/scripts/publicar_frontend.sh` (o `.ps1`) | La web carga desde CloudFront e invalida la caché |
@@ -65,7 +72,7 @@ Diagramas editables: [arquitectura.mmd](arquitectura.mmd) e [iam.mmd](iam.mmd). 
 **Datos de la base local.** Si quieres llevar a RDS los datos que creaste en Docker (no solo la demo), usa
 `migrar_base.sh --datos` sobre una base RDS recién creada y vacía de datos, como indica `infrastructure/README.md`.
 
-## 4. Evidencias por caso de prueba
+## 5. Evidencias por caso de prueba
 
 Guarda cada captura en `evidence/<CP>/` con el nombre `<CP>_<AAAA-MM-DD>_<descripcion>.png` y anota en
 [evidence/README.md](../../evidence/README.md) la fecha, el stack, los pasos, el resultado esperado y el obtenido.
@@ -90,7 +97,7 @@ fields @timestamp, metodo, ruta, estado, ms, request_id
 | sort errores desc
 ```
 
-## 5. Seguridad aplicada (RNF-03, enunciado 7.6)
+## 6. Seguridad aplicada (RNF-03, enunciado 7.6)
 
 - **Sin credenciales en el código ni en el repositorio.** La EC2 usa credenciales temporales del rol de instancia;
   las contraseñas de PostgreSQL y el secreto JWT los genera CloudFormation en Secrets Manager.
@@ -102,12 +109,12 @@ fields @timestamp, metodo, ruta, estado, ms, request_id
 - **Evidencias privadas** con URL prefirmadas de 5 minutos y bitácora de cada descarga (RN-07).
 - **Auditoría:** CloudTrail para la cuenta y auditoría propia de la base para cada cambio de negocio.
 
-## 6. Costos y apagado
+## 7. Costos y apagado
 
 Ver [costos.md](costos.md). Al terminar la evaluación, destruye los stacks en el orden indicado en
 `infrastructure/README.md` (sección «Destrucción»). El presupuesto avisa al 80 %, pero **no detiene** recursos.
 
-## 7. Limitaciones conocidas
+## 8. Limitaciones conocidas
 
 - Con un solo NAT Gateway, la salida a internet depende de una AZ (se acepta por costo en el laboratorio).
 - Sin dominio propio, el HTTPS termina en CloudFront; el tramo CloudFront → ALB va por HTTP dentro de la red de AWS.

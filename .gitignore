@@ -26,3 +26,7 @@ datos_video.txt
 # Paquetes y parches antiguos (no forman parte del código)
 *.zip
 backend/wheels/
+
+.env.produccion
+.env.produccion.*
+!.env.produccion.example

@@ -3,6 +3,7 @@ import { api } from '@/shared/api';
 import { useAuth, useCatalogos } from '@/features/auth';
 import { useAsync } from '@/shared/hooks/useAsync';
 import { Modal } from '@/shared/ui/Modal';
+import './catalogo.css';
 
 export function CatalogoPage() {
   const { can } = useAuth(), { c } = useCatalogos();
@@ -15,12 +16,12 @@ export function CatalogoPage() {
   return <><div className="page-head"><div><h1 className="page-title">Catálogo</h1><p className="page-sub">Modelos de equipos por categoría</p></div>{puede && <button className="btn btn--primary" onClick={() => setDialogo({})}>Crear modelo</button>}</div>
     <label className="field">Categoría<select value={categoria} onChange={(e) => setCategoria(e.target.value)}><option value="">Todas</option>{c.categorias.filter((x) => x.nivel >= 3).map((x) => <option key={x.codigo} value={x.codigo}>{x.nombre}</option>)}</select></label>
     {(error || errorCarga) && <p role="alert" className="error">{error || errorCarga.message}</p>}{progreso !== null && <progress value={progreso} max="100" aria-label="Subida de imagen" />}
-    <div className="card tbl-wrap"><table className="tbl"><thead><tr><th>Categoría</th><th>Marca</th><th>Modelo</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{data?.map((m) => {
+    <div className="card tbl-wrap catalogo-table"><table className="tbl"><thead><tr><th>Categoría</th><th>Marca</th><th>Modelo</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{data?.map((m) => {
       const restante = Math.max(0, new Date(m.editable_hasta).getTime() - ahora), editable = restante > 0;
-      return <tr key={m.uid}><td>{m.categoria_nombre}</td><td>{m.marca_nombre}</td><td>{m.nombre}{!m.activo && ' · inactivo'}</td><td><span className="badge">{editable ? `Editable · quedan ${Math.floor(restante/3600000)} h ${Math.floor(restante/60000)%60} min` : `Bloqueado desde ${new Intl.DateTimeFormat('es-EC', { timeZone:'America/Guayaquil', dateStyle:'short', timeStyle:'short' }).format(new Date(m.editable_hasta))}`}</span></td><td>
+      return <tr key={m.uid}><td data-label="Categoría">{m.categoria_nombre}</td><td data-label="Marca">{m.marca_nombre}</td><td data-label="Modelo">{m.nombre}{!m.activo && ' · inactivo'}</td><td data-label="Estado"><span className="badge" data-tone={editable ? 'lime' : 'gray'}>{editable ? `Editable · quedan ${Math.floor(restante/3600000)} h ${Math.floor(restante/60000)%60} min` : `Bloqueado desde ${new Intl.DateTimeFormat('es-EC', { timeZone:'America/Guayaquil', dateStyle:'short', timeStyle:'short' }).format(new Date(m.editable_hasta))}`}</span></td><td data-label="Acciones"><div className="catalogo-actions">
       {m.tiene_imagen && <button className="btn btn--ghost btn--sm" onClick={() => operacion(async () => { const r = await api.imagenModelo(m.uid); window.open(r.url, '_blank', 'noopener'); })}>Ver foto</button>}
-      {puede && <><button className="btn btn--ghost btn--sm" disabled={!editable} onClick={() => setDialogo(m)}>Editar</button><label className="btn btn--ghost btn--sm">Subir foto<input type="file" accept="image/jpeg,image/png,image/webp" disabled={!editable || progreso !== null} onChange={(e) => imagen(m,e)} /></label></>}
-      {admin && !editable && <button className="btn btn--ghost btn--sm" onClick={() => setDialogo({ reapertura: m })}>Reabrir 24 h</button>}</td></tr>;
+      {puede && <><button className="btn btn--ghost btn--sm" disabled={!editable} onClick={() => setDialogo(m)}>Editar</button><label className="btn btn--ghost btn--sm file-button">Subir foto<input className="sr" aria-label={`Subir foto de ${m.nombre}`} type="file" accept="image/jpeg,image/png,image/webp" disabled={!editable || progreso !== null} onChange={(e) => imagen(m,e)} /></label></>}
+      {admin && !editable && <button className="btn btn--ghost btn--sm" onClick={() => setDialogo({ reapertura: m })}>Reabrir 24 h</button>}</div></td></tr>;
     })}</tbody></table></div>
     {dialogo && <Modal title={dialogo.reapertura ? 'Reabrir modelo' : dialogo.uid ? 'Editar modelo' : 'Crear modelo'} onClose={() => { setDialogo(null); setError(''); }}><form className="accion-form" onSubmit={(e) => { e.preventDefault(); const d = Object.fromEntries(new FormData(e.currentTarget));
       if (dialogo.reapertura) operacion(() => api.reabrirModelo(dialogo.reapertura.uid, d.motivo));

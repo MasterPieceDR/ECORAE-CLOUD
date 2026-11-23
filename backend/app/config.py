@@ -43,6 +43,7 @@ class Config(BaseSettings):
     bucket_contenidos: str = "ecoraee-contenidos"
     aws_region: str = "us-east-1"
     aws_endpoint_url: str | None = None
+    aws_endpoint_url_publica: str | None = None
 
     # Web
     cors_origenes: str = "http://localhost:5171,http://127.0.0.1:5171"

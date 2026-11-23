@@ -49,3 +49,6 @@
 .dash__base > svg { color: var(--sun); }
 .dash__base p { margin: 2px 0 0; color: #C9D6CD; font-size: 14.5px; }
 @media (max-width: 640px) { .dash__base { grid-template-columns: 1fr; } }
+
+.proyeccion-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
+@media (max-width: 620px) { .proyeccion-filters { grid-template-columns: 1fr; } }
