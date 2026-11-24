@@ -45,13 +45,16 @@
     },
     "CloudFrontPrefixListId": {
       "Type": "String",
-      "Default": "pl-3b927c52",
       "Description": "ID regional: aws ec2 describe-managed-prefix-lists --filters Name=prefix-list-name,Values=com.amazonaws.global.cloudfront.origin-facing"
     },
     "CorreoRemitente": {
       "Type": "String",
       "Default": "no-reply@ecoraee.invalid",
       "AllowedPattern": "[a-zA-Z0-9._%+@-]+"
+    },
+    "CorreoEventos": {
+      "Type": "String",
+      "Description": "Correo para suscripcion a eventos de negocio"
     }
   },
   "Resources": {
@@ -259,6 +262,13 @@
                   "Resource": {
                     "Fn::Sub": "arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${CorreoRemitente}"
                   }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "sns:Publish",
+                  "Resource": {
+                    "Ref": "TemaEventos"
+                  }
                 }
               ]
             }
@@ -291,6 +301,23 @@
         "Roles": [
           {
             "Ref": "RuntimeRole"
+          }
+        ]
+      }
+    },
+    "TemaEventos": {
+      "Type": "AWS::SNS::Topic",
+      "Properties": {
+        "TopicName": {
+          "Fn::Sub": "${Prefijo}-eventos"
+        },
+        "KmsMasterKeyId": "alias/aws/sns",
+        "Subscription": [
+          {
+            "Endpoint": {
+              "Ref": "CorreoEventos"
+            },
+            "Protocol": "email"
           }
         ]
       }
@@ -342,6 +369,16 @@
       "Export": {
         "Name": {
           "Fn::Sub": "${Prefijo}-InstanceProfile"
+        }
+      }
+    },
+    "TemaEventosArn": {
+      "Value": {
+        "Ref": "TemaEventos"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${Prefijo}-TemaEventosArn"
         }
       }
     }

@@ -1,0 +1,783 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "EcoRAEE - identidades y rol de despliegue",
+  "Parameters": {
+    "Prefijo": {
+      "Type": "String",
+      "Default": "ecoraee-prod"
+    },
+    "Entorno": {
+      "Type": "String",
+      "Default": "prod"
+    },
+    "Responsable": {
+      "Type": "String"
+    },
+    "UsuarioInfra": {
+      "Type": "String",
+      "Default": "iam-user-infra-nicolas"
+    },
+    "UsuarioDBA": {
+      "Type": "String",
+      "Default": "iam-user-dba-diego"
+    },
+    "UsuarioApp": {
+      "Type": "String",
+      "Default": "iam-user-app-eithan"
+    }
+  },
+  "Resources": {
+    "InfraUser": {
+      "Type": "AWS::IAM::User",
+      "Properties": {
+        "UserName": {
+          "Ref": "UsuarioInfra"
+        },
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "DBAUser": {
+      "Type": "AWS::IAM::User",
+      "Properties": {
+        "UserName": {
+          "Ref": "UsuarioDBA"
+        },
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "AppUser": {
+      "Type": "AWS::IAM::User",
+      "Properties": {
+        "UserName": {
+          "Ref": "UsuarioApp"
+        },
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    },
+    "InfraGroup": {
+      "Type": "AWS::IAM::Group",
+      "Properties": {
+        "GroupName": "EcoRAEE-InfraAdmins",
+        "ManagedPolicyArns": [
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/AWSCloudFormationFullAccess"
+          },
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/IAMUserChangePassword"
+          }
+        ]
+      }
+    },
+    "DBAGroup": {
+      "Type": "AWS::IAM::Group",
+      "Properties": {
+        "GroupName": "EcoRAEE-DBAdmins",
+        "ManagedPolicyArns": [
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/AmazonRDSReadOnlyAccess"
+          },
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/IAMUserChangePassword"
+          }
+        ]
+      }
+    },
+    "AppGroup": {
+      "Type": "AWS::IAM::Group",
+      "Properties": {
+        "GroupName": "EcoRAEE-AppAdmins",
+        "ManagedPolicyArns": [
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/AmazonEC2ReadOnlyAccess"
+          },
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/IAMUserChangePassword"
+          }
+        ]
+      }
+    },
+    "DevGroup": {
+      "Type": "AWS::IAM::Group",
+      "Properties": {
+        "GroupName": "EcoRAEE-Developers",
+        "ManagedPolicyArns": [
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/AWSCloudFormationReadOnlyAccess"
+          }
+        ]
+      }
+    },
+    "MonitoringGroup": {
+      "Type": "AWS::IAM::Group",
+      "Properties": {
+        "GroupName": "EcoRAEE-Monitoring",
+        "ManagedPolicyArns": [
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/CloudWatchReadOnlyAccess"
+          },
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/AWSCloudTrail_ReadOnlyAccess"
+          }
+        ]
+      }
+    },
+    "InfraMembership": {
+      "Type": "AWS::IAM::UserToGroupAddition",
+      "Properties": {
+        "Users": [
+          {
+            "Ref": "InfraUser"
+          }
+        ],
+        "GroupName": {
+          "Ref": "InfraGroup"
+        }
+      }
+    },
+    "InfraMembershipMonitoring": {
+      "Type": "AWS::IAM::UserToGroupAddition",
+      "Properties": {
+        "Users": [
+          {
+            "Ref": "InfraUser"
+          }
+        ],
+        "GroupName": {
+          "Ref": "MonitoringGroup"
+        }
+      }
+    },
+    "DBAMembership": {
+      "Type": "AWS::IAM::UserToGroupAddition",
+      "Properties": {
+        "Users": [
+          {
+            "Ref": "DBAUser"
+          }
+        ],
+        "GroupName": {
+          "Ref": "DBAGroup"
+        }
+      }
+    },
+    "DBAMembershipMonitoring": {
+      "Type": "AWS::IAM::UserToGroupAddition",
+      "Properties": {
+        "Users": [
+          {
+            "Ref": "DBAUser"
+          }
+        ],
+        "GroupName": {
+          "Ref": "MonitoringGroup"
+        }
+      }
+    },
+    "AppMembership": {
+      "Type": "AWS::IAM::UserToGroupAddition",
+      "Properties": {
+        "Users": [
+          {
+            "Ref": "AppUser"
+          }
+        ],
+        "GroupName": {
+          "Ref": "AppGroup"
+        }
+      }
+    },
+    "AppMembershipDev": {
+      "Type": "AWS::IAM::UserToGroupAddition",
+      "Properties": {
+        "Users": [
+          {
+            "Ref": "AppUser"
+          }
+        ],
+        "GroupName": {
+          "Ref": "DevGroup"
+        }
+      }
+    },
+    "AppMembershipMonitoring": {
+      "Type": "AWS::IAM::UserToGroupAddition",
+      "Properties": {
+        "Users": [
+          {
+            "Ref": "AppUser"
+          }
+        ],
+        "GroupName": {
+          "Ref": "MonitoringGroup"
+        }
+      }
+    },
+    "InfraPolicy": {
+      "Type": "AWS::IAM::ManagedPolicy",
+      "Properties": {
+        "ManagedPolicyName": "EcoRAEE-InfraOpsPolicy",
+        "Groups": [
+          {
+            "Ref": "InfraGroup"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "cloudformation:DescribeStacks",
+                "cloudformation:DescribeStackEvents",
+                "cloudformation:GetTemplate",
+                "cloudformation:ListStacks",
+                "ec2:Describe*",
+                "elasticloadbalancing:Describe*",
+                "autoscaling:Describe*",
+                "cloudfront:GetDistribution",
+                "cloudfront:ListDistributions"
+              ],
+              "Resource": [
+                "*"
+              ]
+            },
+            {
+              "Effect": "Allow",
+              "Action": "iam:PassRole",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "DeployRole",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:DeleteObject"
+              ],
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:s3:::${Prefijo}-artefactos*/*"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+              ],
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:s3:::${Prefijo}-artefactos*"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": "ssm:GetParameter",
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:ssm:${AWS::Region}::parameter/aws/service/ami-amazon-linux-latest/*"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "DBAPolicy": {
+      "Type": "AWS::IAM::ManagedPolicy",
+      "Properties": {
+        "ManagedPolicyName": "DatabaseOpsPolicy",
+        "Groups": [
+          {
+            "Ref": "DBAGroup"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "rds:Describe*",
+                "rds:ListTagsForResource",
+                "rds:CreateDBSnapshot",
+                "rds:DescribeDBSnapshots"
+              ],
+              "Resource": [
+                "*"
+              ]
+            },
+            {
+              "Effect": "Allow",
+              "Action": "secretsmanager:GetSecretValue",
+              "Resource": [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:rds!db-*"
+                },
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Prefijo}/servicios-*"
+                }
+              ]
+            },
+            {
+              "Effect": "Allow",
+              "Action": "ssm:StartSession",
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/*"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "ssm:resourceTag/Proyecto": "EcoRAEE",
+                  "ssm:resourceTag/Entorno": {
+                    "Ref": "Entorno"
+                  }
+                }
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": "ssm:StartSession",
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:ssm:${AWS::Region}::document/AWS-StartPortForwardingSessionToRemoteHost"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "ssm:TerminateSession",
+                "ssm:ResumeSession"
+              ],
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:session/${!aws:username}-*"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "AppPolicy": {
+      "Type": "AWS::IAM::ManagedPolicy",
+      "Properties": {
+        "ManagedPolicyName": "AppsOpsPolicy",
+        "Groups": [
+          {
+            "Ref": "AppGroup"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "autoscaling:Describe*",
+                "ec2:DescribeInstances",
+                "elasticloadbalancing:Describe*"
+              ],
+              "Resource": [
+                "*"
+              ]
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:DeleteObject"
+              ],
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:s3:::${Prefijo}-frontend*/*"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+              ],
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:s3:::${Prefijo}-frontend*"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "cloudfront:CreateInvalidation",
+                "cloudfront:GetInvalidation",
+                "cloudfront:GetDistribution"
+              ],
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/*"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": "ssm:StartSession",
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:ssm:${AWS::Region}::document/SSM-SessionManagerRunShell"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": "ssm:StartSession",
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/*"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "ssm:resourceTag/Proyecto": "EcoRAEE",
+                  "ssm:resourceTag/Entorno": {
+                    "Ref": "Entorno"
+                  }
+                }
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": "ssm:StartSession",
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:ssm:${AWS::Region}::document/AWS-StartPortForwardingSessionToRemoteHost"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "ssm:TerminateSession",
+                "ssm:ResumeSession"
+              ],
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:session/${!aws:username}-*"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "DevPolicy": {
+      "Type": "AWS::IAM::ManagedPolicy",
+      "Properties": {
+        "ManagedPolicyName": "DeveloperPolicy",
+        "Groups": [
+          {
+            "Ref": "DevGroup"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "ssm:StartSession",
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:ssm:${AWS::Region}::document/SSM-SessionManagerRunShell"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": "ssm:StartSession",
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/*"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "ssm:resourceTag/Proyecto": "EcoRAEE",
+                  "ssm:resourceTag/Entorno": {
+                    "Ref": "Entorno"
+                  }
+                }
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": "ssm:StartSession",
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:ssm:${AWS::Region}::document/AWS-StartPortForwardingSessionToRemoteHost"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "ssm:TerminateSession",
+                "ssm:ResumeSession"
+              ],
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:session/${!aws:username}-*"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "MonitoringPolicy": {
+      "Type": "AWS::IAM::ManagedPolicy",
+      "Properties": {
+        "ManagedPolicyName": "AuditReadPolicy",
+        "Groups": [
+          {
+            "Ref": "MonitoringGroup"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "cloudwatch:DescribeAlarms",
+                "cloudwatch:GetMetricData",
+                "cloudwatch:ListMetrics",
+                "logs:DescribeLogGroups",
+                "logs:DescribeLogStreams",
+                "logs:FilterLogEvents",
+                "cloudtrail:LookupEvents",
+                "cloudtrail:DescribeTrails"
+              ],
+              "Resource": [
+                "*"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "DeployRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": "EcoRAEE-CfnDeployRole",
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudformation.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "EcoRAEE-DeployServices",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "ec2:*",
+                    "elasticloadbalancing:*",
+                    "autoscaling:*",
+                    "rds:*",
+                    "s3:*",
+                    "cloudfront:*",
+                    "cloudwatch:*",
+                    "logs:*",
+                    "cloudtrail:*",
+                    "budgets:*",
+                    "sns:*",
+                    "secretsmanager:*",
+                    "ssm:*",
+                    "kms:*",
+                    "ses:*",
+                    "events:*",
+                    "tag:*"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "iam:CreateRole",
+                    "iam:DeleteRole",
+                    "iam:GetRole",
+                    "iam:TagRole",
+                    "iam:UntagRole",
+                    "iam:PutRolePolicy",
+                    "iam:GetRolePolicy",
+                    "iam:DeleteRolePolicy",
+                    "iam:AttachRolePolicy",
+                    "iam:DetachRolePolicy",
+                    "iam:ListAttachedRolePolicies",
+                    "iam:ListRolePolicies",
+                    "iam:UpdateAssumeRolePolicy"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${Prefijo}-*"
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "iam:CreateInstanceProfile",
+                    "iam:DeleteInstanceProfile",
+                    "iam:GetInstanceProfile",
+                    "iam:AddRoleToInstanceProfile",
+                    "iam:RemoveRoleFromInstanceProfile",
+                    "iam:TagInstanceProfile",
+                    "iam:UntagInstanceProfile"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:instance-profile/${Prefijo}-*"
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "iam:PassRole",
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${Prefijo}-*"
+                  },
+                  "Condition": {
+                    "StringEquals": {
+                      "iam:PassedToService": "ec2.amazonaws.com"
+                    }
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "iam:CreateServiceLinkedRole",
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/aws-service-role/*"
+                  },
+                  "Condition": {
+                    "StringLike": {
+                      "iam:AWSServiceName": [
+                        "autoscaling.amazonaws.com",
+                        "rds.amazonaws.com",
+                        "elasticloadbalancing.amazonaws.com"
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Proyecto",
+            "Value": "EcoRAEE"
+          },
+          {
+            "Key": "Entorno",
+            "Value": {
+              "Ref": "Entorno"
+            }
+          },
+          {
+            "Key": "Responsable",
+            "Value": {
+              "Ref": "Responsable"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "InfraGroupArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "InfraGroup",
+          "Arn"
+        ]
+      }
+    },
+    "DBAGroupArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "DBAGroup",
+          "Arn"
+        ]
+      }
+    },
+    "AppGroupArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "AppGroup",
+          "Arn"
+        ]
+      }
+    },
+    "DevGroupArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "DevGroup",
+          "Arn"
+        ]
+      }
+    },
+    "MonitoringGroupArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "MonitoringGroup",
+          "Arn"
+        ]
+      }
+    },
+    "DeployRoleArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "DeployRole",
+          "Arn"
+        ]
+      }
+    },
+    "ConsoleLoginUrl": {
+      "Value": {
+        "Fn::Sub": "https://${AWS::AccountId}.signin.aws.amazon.com/console"
+      }
+    }
+  }
+}

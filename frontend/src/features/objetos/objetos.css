@@ -100,3 +100,9 @@
 .devices table { min-width: 720px; }
 .devices td { overflow-wrap: anywhere; }
 @media (max-width: 900px) { .devices table { min-width: 0; } }
+
+.filtros-toggle { display: none; }
+@media (max-width: 767px) {
+  .filtros-toggle { display: inline-flex; margin-bottom: 14px; }
+  .filtros-equipos[data-abiertos="false"] { display: none; }
+}

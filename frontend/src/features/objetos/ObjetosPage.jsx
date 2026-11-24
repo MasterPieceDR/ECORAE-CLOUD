@@ -23,6 +23,7 @@ export function ObjetosPage() {
   const filtros = { q: params.get('q') ?? '', estado: params.get('estado') ?? '', clasificacion: params.get('clasificacion') ?? '', tipo: params.get('tipo') ?? '', centro: params.get('centro') ?? '', serie: params.get('serie') ?? '' };
   const categoria = params.get('categoria') ?? '';
   const { data, loading, error, reload } = useAsync(() => api.objetos(categoria ? { ...filtros, limite: 500 } : filtros), [params.toString()]);
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
   const [sel, setSel] = useState(new Set());
   const [dialogo, setDialogo] = useState(null);
   const set = (k) => (e) => { const p = new URLSearchParams(params); if (e.target.value) p.set(k, e.target.value); else p.delete(k); setParams(p, { replace: true }); };
@@ -35,7 +36,8 @@ export function ObjetosPage() {
   return (
     <>
       <PageHeader title="Equipos y lotes" description={`Cada objeto con su identificador único, estado e historia${data ? ` · ${data.total} visibles para ti` : ''}.`} action={can('OBJETO.REGISTRAR') && <button className="btn btn--primary" onClick={() => setDialogo('registrar')}><Icon name="plus" size={18} /> Registrar equipo</button>} />
-      <div className="filters">
+      <button type="button" className="btn btn--ghost filtros-toggle" aria-expanded={filtrosAbiertos} aria-controls="filtros-equipos" onClick={() => setFiltrosAbiertos(!filtrosAbiertos)}>Filtros ({Object.values({ ...filtros, categoria }).filter(Boolean).length})</button>
+      <div id="filtros-equipos" className="filters filtros-equipos" data-abiertos={filtrosAbiertos}>
         <label className="field">Buscar<input type="search" placeholder="Código, categoría, marca, serie, lote u origen" value={filtros.q} onChange={set('q')} /></label>
         <label className="field">Categoría<select value={categoria} onChange={set('categoria')}><option value="">Todas las categorías</option>{c.categorias.filter((x) => x.nivel >= 3).map((x) => <option key={x.codigo} value={x.codigo}>{x.nombre}</option>)}</select></label>
         <label className="field">Serie exacta<input value={filtros.serie} onChange={set('serie')} /></label>

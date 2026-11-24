@@ -1,13 +1,14 @@
 """Documentos operativos del ciclo de vida: cada endpoint llama a una función api.* que aplica RN-01…RN-09."""
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
 
 from .. import db
+from ..eventos import publicar_evento
 from ..seguridad import Sesion, sesion
 
 router = APIRouter(prefix="/documentos", tags=["Documentos operativos"])
@@ -144,20 +145,24 @@ async def evaluar(d: EvaluacionIn, s: Sesion = Depends(sesion)):
 
 
 @router.post("/transferencias", status_code=201)
-async def transferir(d: TransferenciaIn, s: Sesion = Depends(sesion)):
+async def transferir(d: TransferenciaIn, tareas: BackgroundTasks, s: Sesion = Depends(sesion)):
     async with s.tx() as conn:
         uid = await conn.fetchval("SELECT api.fn_transferir($1::uuid[], $2, $3, $4, $5, $6)",
                                   d.objetos, d.nodo_origen, d.nodo_destino, d.ubicacion_destino, d.criterio_asignacion, d.transportista)
         await conn.execute("SET CONSTRAINTS ALL IMMEDIATE")
-        return await _numero(conn, uid)
+        resultado = await _numero(conn, uid)
+    tareas.add_task(publicar_evento, "transferencia.enviada", {**resultado, "objetos": d.objetos, "nodo_origen": d.nodo_origen, "nodo_destino": d.nodo_destino, "estado": "ENVIADA", "fecha": datetime.now(timezone.utc).isoformat()})
+    return resultado
 
 
 @router.post("/transferencias/{uid}/recibir")
-async def recibir_transferencia(uid: Uid, d: RecibirTransferenciaIn, s: Sesion = Depends(sesion)):
+async def recibir_transferencia(uid: Uid, d: RecibirTransferenciaIn, tareas: BackgroundTasks, s: Sesion = Depends(sesion)):
     async with s.tx() as conn:
         await conn.execute("SELECT api.fn_recibir_transferencia($1::uuid, $2::uuid[], $3)", uid, d.evidencias, d.ubicacion)
         await conn.execute("SET CONSTRAINTS ALL IMMEDIATE")
-        return await _numero(conn, uid)
+        resultado = await _numero(conn, uid)
+    tareas.add_task(publicar_evento, "transferencia.recibida", {**resultado, "estado": "RECIBIDA", "fecha": datetime.now(timezone.utc).isoformat()})
+    return resultado
 
 
 @router.post("/tratamientos", status_code=201)
@@ -171,9 +176,11 @@ async def tratar(d: TratamientoIn, s: Sesion = Depends(sesion)):
 
 
 @router.post("/cierres", status_code=201)
-async def cerrar(d: CierreIn, s: Sesion = Depends(sesion)):
+async def cerrar(d: CierreIn, tareas: BackgroundTasks, s: Sesion = Depends(sesion)):
     async with s.tx() as conn:
         uid = await conn.fetchval("SELECT api.fn_cerrar_trazabilidad($1::uuid, coalesce($2::timestamptz, now()), $3::uuid[], $4)",
                                   d.objeto, d.fecha_confirmacion, d.evidencias, d.observacion)
         await conn.execute("SET CONSTRAINTS ALL IMMEDIATE")
-        return await _numero(conn, uid)
+        resultado = await _numero(conn, uid)
+    tareas.add_task(publicar_evento, "trazabilidad.cerrada", {**resultado, "objeto": d.objeto, "estado": "CERRADA", "fecha": (d.fecha_confirmacion or datetime.now(timezone.utc)).isoformat()})
+    return resultado

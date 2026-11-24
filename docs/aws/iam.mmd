@@ -1,12 +1,15 @@
 flowchart LR
-  Infra[EcoRAEE-InfraAdmins] --> InfraOps[EcoRAEE-InfraOpsPolicy]
-  DB[EcoRAEE-DBAdmins] --> DBOps[DatabaseOpsPolicy]
-  App[EcoRAEE-AppAdmins] --> AppOps[AppsOpsPolicy]
-  Dev[EcoRAEE-Developers] --> Developer[DeveloperPolicy]
-  Mon[EcoRAEE-Monitoring] --> Audit[AuditReadPolicy]
-  App --> Evidence[S3EvidencePolicy opcional]
-  EC2[EcoRAEE-EC2RuntimeRole / LabRole] --> Runtime[RuntimeDataPolicy]
-  EC2 --> SSM[AmazonSSMManagedInstanceCore]
-  EC2 --> CW[CloudWatchAgentServerPolicy]
-  Runtime --> B[S3: dos buckets]
-  Runtime --> SM[Secrets Manager: dos secretos]
+  N[iam-user-infra-nicolas] --> I[EcoRAEE-InfraAdmins]
+  D[iam-user-dba-diego] --> B[EcoRAEE-DBAdmins]
+  E[iam-user-app-eithan] --> A[EcoRAEE-AppAdmins]
+  E --> V[EcoRAEE-Developers]
+  N --> M[EcoRAEE-Monitoring]
+  D --> M
+  E --> M
+  I -->|PassRole| R[EcoRAEE-CfnDeployRole]
+  R -->|CloudFormation| S[Stacks 01 a 07]
+  B -->|Secreto y túnel SSM| DB[(RDS)]
+  A -->|Publicar e invalidar| F[S3 frontend y CloudFront]
+  A -->|Session Manager| EC[EC2]
+  V -->|Session Manager| EC
+  EC -->|Rol de ejecución| DATA[S3, secretos de servicio y SNS]

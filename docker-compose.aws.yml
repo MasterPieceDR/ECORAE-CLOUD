@@ -3,7 +3,7 @@ services:
     image: ${IMAGEN_API:?Indique IMAGEN_API}
     restart: unless-stopped
     ports: ["8000:8000"]
-    env_file: .env.aws
+    env_file: .env.aws # Incluye SNS_TOPIC_ARN opcional.
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=* --no-access-log
     logging:
       driver: awslogs
