@@ -2,7 +2,8 @@
 
 ## Inicio de cuenta propia
 
-1. Con la cuenta raíz, en la consola de CloudFormation de `us-east-2`, cree primero el stack `ecoraee-prod-iam` desde `08-iam.yaml`, con `Prefijo=ecoraee-prod`, `Entorno=prod` y `Responsable`; acepte la creación de recursos IAM con nombre. Anote las salidas del rol y del inicio de sesión.
+1. Con la cuenta raíz, en la consola de CloudFormation de `us-east-2`, cree primero el stack `ecoraee-prod-iam` desde `08-iam.yaml`, con `Prefijo=ecoraee-prod`, `Entorno=prod` y `Responsable`; acepte la creación de recursos IAM con nombre. Anote las salidas del rol y del inicio de sesión. Si la cuenta nunca usó acciones de alarma de EC2, cree también una vez el rol vinculado al servicio que necesita la alarma de recuperación (el rol de despliegue no puede crearlo): `aws iam create-service-linked-role --aws-service-name events.amazonaws.com`.
+   En el plan gratuito de AWS, despliegue `03-datos` con `DiasRespaldo=1` (el plan limita la retención de respaldos). Desde Git Bash en Windows exporte `MSYS_NO_PATHCONV=1` para que `/ecoraee/prod/api` no se convierta en una ruta de Windows.
 2. El titular crea en IAM las contraseñas de consola y las claves de acceso necesarias, y las entrega por un canal seguro. La plantilla no crea credenciales ni fuerza MFA; configure MFA y política de contraseñas en la cuenta. No vuelva a usar la raíz para las operaciones ordinarias.
 3. Configure AWS CLI v2 con el usuario de infraestructura. El bucket de artefactos debe existir previamente, ser privado y llamarse `ecoraee-prod-artefactos...`. Los nombres del frontend deben comenzar por `ecoraee-prod-frontend`. El usuario de aplicaciones publica el frontend; el DBA migra por túnel. El rol de CloudFormation opera los stacks 01–07 mediante `--role-arn`.
 

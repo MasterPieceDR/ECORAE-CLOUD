@@ -25,6 +25,18 @@
     }
   },
   "Resources": {
+    "SuscripcionAlertas": {
+      "Type": "AWS::SNS::Subscription",
+      "Properties": {
+        "TopicArn": {
+          "Ref": "Topic"
+        },
+        "Protocol": "email",
+        "Endpoint": {
+          "Ref": "CorreoAlerta"
+        }
+      }
+    },
     "Topic": {
       "Type": "AWS::SNS::Topic",
       "Properties": {

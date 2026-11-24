@@ -30,7 +30,17 @@ def nueva_clave(prefijo: str, mime: str) -> str:
 
 def _s3(para_firmar: bool = False):
     import boto3
-    return boto3.client("s3", region_name=config().aws_region, endpoint_url=(config().aws_endpoint_url_publica if para_firmar and config().aws_endpoint_url_publica else config().aws_endpoint_url))
+    from botocore.config import Config
+
+    ajustes = config()
+    endpoint = ajustes.aws_endpoint_url_publica if para_firmar and ajustes.aws_endpoint_url_publica else ajustes.aws_endpoint_url
+    if endpoint:
+        return boto3.client("s3", region_name=ajustes.aws_region, endpoint_url=endpoint)
+    return boto3.client(
+        "s3", region_name=ajustes.aws_region,
+        endpoint_url=f"https://s3.{ajustes.aws_region}.amazonaws.com",
+        config=Config(signature_version="s3v4", s3={"addressing_style": "virtual"}),
+    )
 
 
 def _firma(metodo: str, bucket: str, clave: str, expira: int) -> str:

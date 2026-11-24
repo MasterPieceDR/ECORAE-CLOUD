@@ -1,12 +1,42 @@
 """Pruebas del contrato común de los almacenes de la fase 2."""
 import hashlib
 import io
+from types import SimpleNamespace
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from PIL import Image
 
 from app import almacen
 from app.errores import ErrorAPI
+
+
+def test_url_s3_regional_sin_endpoint_personalizado(monkeypatch):
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "clave-falsa")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "secreto-falso")
+    monkeypatch.delenv("AWS_SESSION_TOKEN", raising=False)
+    monkeypatch.setattr(almacen, "config", lambda: SimpleNamespace(
+        aws_region="us-east-2", aws_endpoint_url=None, aws_endpoint_url_publica=None,
+    ))
+
+    url = almacen.AlmacenS3().url_subida("bucket-prueba", "archivo.pdf", "application/pdf")["url"]
+    partes = urlparse(url)
+    assert partes.netloc == "bucket-prueba.s3.us-east-2.amazonaws.com"
+    assert parse_qs(partes.query)["X-Amz-Algorithm"] == ["AWS4-HMAC-SHA256"]
+
+
+def test_url_s3_endpoint_personalizado(monkeypatch):
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "clave-falsa")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "secreto-falso")
+    monkeypatch.setattr(almacen, "config", lambda: SimpleNamespace(
+        aws_region="us-east-2", aws_endpoint_url="http://localstack:4566",
+        aws_endpoint_url_publica="http://localhost:4566",
+    ))
+
+    url = almacen.AlmacenS3().url_subida("bucket-prueba", "archivo.pdf", "application/pdf")["url"]
+    assert urlparse(url).netloc == "localhost:4566"
+    assert urlparse(url).path == "/bucket-prueba/archivo.pdf"
+    assert almacen._s3().meta.endpoint_url == "http://localstack:4566"
 
 
 @pytest.mark.parametrize("formato,mime", [("PNG", "image/png"), ("WEBP", "image/webp")])
