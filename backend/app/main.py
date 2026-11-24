@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import hmac
 import logging
 import time
 import uuid
@@ -11,6 +12,7 @@ import asyncpg
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import db, errores
@@ -58,12 +60,22 @@ async def contexto_peticion(request: Request, siguiente):
     rid = request.headers.get("x-request-id") or uuid.uuid4().hex
     request.state.request_id = rid[:64]
     t0 = time.perf_counter()
-    respuesta = await siguiente(request)
+    secreto = config().origin_secret
+    recibido = request.headers.get("x-origin-verify", "")
+    if secreto and not hmac.compare_digest(secreto.encode("utf-8"), recibido.encode("utf-8")):
+        respuesta = JSONResponse(status_code=403, content={"detail": "Forbidden"})
+    else:
+        try:
+            respuesta = await siguiente(request)
+        except Exception:
+            log.exception("peticion", extra={"extra": {"metodo": request.method, "ruta": request.url.path,
+                "estado": 500, "ms": round((time.perf_counter() - t0) * 1000, 1), "request_id": request.state.request_id}})
+            raise
     ms = round((time.perf_counter() - t0) * 1000, 1)
     respuesta.headers["X-Request-ID"] = request.state.request_id
     respuesta.headers["X-Content-Type-Options"] = "nosniff"
     respuesta.headers["Referrer-Policy"] = "no-referrer"
-    if not request.url.path.endswith("/salud"):
+    if respuesta.status_code >= 500 or not request.url.path.endswith("/salud"):
         log.info("peticion", extra={"extra": {"metodo": request.method, "ruta": request.url.path, "estado": respuesta.status_code,
                                               "ms": ms, "request_id": request.state.request_id,
                                               "usuario": getattr(request.state, "usuario", None)}})

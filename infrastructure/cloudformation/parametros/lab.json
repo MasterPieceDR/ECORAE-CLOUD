@@ -2,7 +2,7 @@
   "Prefijo": "ecoraee-lab",
   "Entorno": "lab",
   "Responsable": "REEMPLAZAR",
-  "CrearNAT": "true",
+  "CrearNAT": "false",
   "CrearEndpoints": "false",
   "UsarLabRole": "true",
   "LabInstanceProfile": "LabInstanceProfile",

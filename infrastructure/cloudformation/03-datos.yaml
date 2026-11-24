@@ -25,6 +25,13 @@
         "false"
       ]
     },
+    "DiasRespaldo": {
+      "Type": "Number",
+      "Default": 7,
+      "MinValue": 1,
+      "MaxValue": 35,
+      "Description": "Días de retención de respaldos automáticos (las cuentas del plan gratuito admiten 1)"
+    },
     "VersionPostgres": {
       "Type": "String",
       "Default": "16.11"
@@ -85,7 +92,9 @@
         "DBName": "ecoraee",
         "MasterUsername": "ecoraee_admin",
         "ManageMasterUserPassword": true,
-        "BackupRetentionPeriod": 7,
+        "BackupRetentionPeriod": {
+          "Ref": "DiasRespaldo"
+        },
         "EnableCloudwatchLogsExports": [
           "postgresql",
           "upgrade"

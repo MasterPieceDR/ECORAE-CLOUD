@@ -12,30 +12,16 @@ aquí se explica el orden, el porqué y cómo comprobar cada paso.
 ## 1. Arquitectura que se despliega
 
 ```
-Usuario ──HTTPS──▶ CloudFront ──OAC──▶ S3 (frontend, privado)
-                       │
-                       └──/api/* (sin caché)──▶ ALB (subredes públicas, 2 AZ)
-                                                   │ :8000 (solo desde el SG del ALB)
-                                                   ▼
-                                    EC2 en Auto Scaling (subredes privadas de app, 2 AZ)
-                                     │ rol EcoRAEE-EC2RuntimeRole · IMDSv2 · sin SSH (Session Manager)
-                                     │ :5432 TLS (solo desde el SG de la app)
-                                     ▼
-                                    RDS PostgreSQL 16 (subredes privadas de datos, 2 AZ; Multi-AZ opcional)
-Navegador ──PUT/GET prefirmado──▶ S3 evidencias / S3 contenidos (privados, cifrados, versionados)
-Observabilidad: CloudWatch Logs + alarmas → SNS (correo) · CloudTrail · AWS Budgets
+Usuario ─ HTTPS ─▶ CloudFront ─ OAC ─▶ S3 frontend privado
+                      └─ /api/* ─ HTTP :80 + X-Origin-Verify ─▶ EC2 pública
+                           SG: prefix list CloudFront; sin SSH       │
+                                                         TLS :5432 ▼
+                                               RDS privado PostgreSQL 16
+Navegador ─ URL prefirmada ─▶ S3 evidencias / contenidos
+CloudWatch y CloudTrail → SNS y auditoría; Budgets alerta de gastos
 ```
 
-Diagramas editables: [arquitectura.mmd](arquitectura.mmd) e [iam.mmd](iam.mmd). Cambios respecto al diagrama de la Parte II:
-
-| Hallazgo en la Parte II | Corrección |
-|---|---|
-| EC2 y RDS solo en la AZ A (punto único de fallo, RNF-02; además el ALB y el grupo de subredes de RDS exigen 2 AZ) | Subredes en 2 AZ, ASG de 1 a 2 instancias, RDS con grupo de subredes en 2 AZ y Multi-AZ por parámetro |
-| EC2 privada sin salida a Secrets Manager, CloudWatch ni SSM | NAT Gateway (parámetro `CrearNAT`) y endpoints de interfaz opcionales (`CrearEndpoints`) |
-| La subida de evidencias se dibujaba desde la EC2 por el endpoint de VPC, pero el código sube desde el navegador con URL prefirmada | El diagrama refleja la subida directa navegador → S3; los buckets tienen CORS y no se restringen al endpoint de VPC |
-| ALB fuera de las subredes públicas y sin grupos de seguridad | ALB en las subredes públicas; cadena de SG ALB → EC2:8000 → RDS:5432 |
-| CloudTrail conectado a RDS | CloudTrail registra las llamadas a la API de AWS de toda la cuenta; los logs de la app salen de la EC2 por `awslogs` |
-| Un solo bucket de evidencias | Dos buckets: evidencias y contenidos (videos de capacitación), como usa el código |
+[Diagrama editable](arquitectura.mmd). Una sola EC2, sin NAT ni ALB, reduce costo pero no proporciona alta disponibilidad multi-instancia. La recuperación automática cubre fallos de infraestructura de EC2. El enlace CloudFront–EC2 usa HTTP; el secreto y los datos de API transitan por ese enlace sin TLS.
 
 ## 2. Requisitos previos
 
@@ -61,11 +47,11 @@ http://localhost:8090 lo mismo que comprobarás en AWS. El resultado del ensayo 
 |---|---|---|
 | 0 | Con la cuenta raíz crear `08-iam`, crear contraseñas y claves, configurar el usuario de infraestructura y obtener la salida `DeployRoleArn` | Verificar usuarios, grupos y rol; habilitar MFA |
 | 1 | Crear el bucket de artefactos (privado, cifrado) y subir el ZIP del código del backend | `aws s3 ls s3://<artefactos>/ecoraee/` |
-| 2 | Stack `red` (VPC, 6 subredes, IGW, NAT, endpoint S3) | Consola VPC → mapa de recursos con 2 AZ |
+| 2 | Stack `red` (VPC, 6 subredes, IGW, sin NAT, endpoint S3) | Consola VPC → mapa de recursos con 2 AZ |
 | 3 | Stack `seguridad` (grupos de seguridad, rol e instance profile) | Reglas de entrada de cada SG; política del rol |
 | 4 | Stack `datos` (RDS, secretos generados) | RDS «Disponible», sin acceso público, cifrado activado |
 | 5 | Stack `almacenamiento` (buckets con bloqueo público, cifrado, versionado y CORS) | Pestaña Permisos de cada bucket |
-| 6 | Stack `computo` (Launch Template, ALB, target group, ASG) | Target group: instancias `healthy` (tras el paso 8) |
+| 6 | Stack `computo` (EC2 pública, secreto, logs y alarma de recuperación) | EC2 activa, chequeos de estado correctos |
 | 7 | Stack `cdn` (CloudFront con OAC y origen `/api/*`) y redepliegue de `almacenamiento` y `computo` con el dominio real de CloudFront como `OrigenWeb` | `https://<dominio>/` carga la web |
 | 8 | Migrar la base: `infrastructure/scripts/migrar_base.sh` desde una sesión privada (scripts 01–20, logins de servicio y preparación de producción: cuentas sintéticas sin credencial y administrador inicial con clave aleatoria). Para la evaluación, `CLAVE_DEMO=<clave aleatoria>` activa las cuentas sintéticas con esa clave, que se entrega al docente por un canal privado | `https://<dominio>/api/v1/verificacion/conexion` responde `PostgreSQL 16` y el login con la clave del repositorio da 401 |
 | 9 | `docker exec ecoraee-api python -m app.cli inicializar` (por Session Manager) para calcular la red E0–E4 | Dashboard muestra la capacidad de la red |
@@ -86,11 +72,11 @@ Guarda cada captura en `evidence/<CP>/` con el nombre `<CP>_<AAAA-MM-DD>_<descri
 |---|---|---|
 | **CP-01** Acceso por rol | Permite o deniega según la matriz | En la web desplegada: un generador no ve «Usuarios»; respuesta 403 al intentar crear un modelo de catálogo |
 | **CP-09** Integración matemática | El algoritmo procesa datos de la red leídos desde RDS | Página «Red» con flujo máximo y corte mínimo; `GET /api/v1/verificacion/base` mostrando el motor en RDS |
-| **CP-10** Conectividad cloud | Comunicación autorizada; acceso directo restringido | (1) web → API → RDS funcionando (`/verificacion/conexion`); (2) la EC2 **sin IP pública**; (3) RDS con «Acceso público: No»; (4) intento de abrir el bucket del frontend por su URL S3 directa → `AccessDenied` (solo CloudFront entra por OAC); (5) SG de RDS que solo admite 5432 desde el SG de la app |
-| **CP-11** IAM | Aplica mínimo privilegio | (1) política del rol de EC2 limitada a los dos buckets, a los dos secretos y a logs; (2) desde la EC2 por Session Manager, `aws s3 ls` de otro bucket → `AccessDenied`; (3) `aws secretsmanager get-secret-value` del secreto maestro → `AccessDenied`; (4) grupos y usuarios IAM sin `AdministratorAccess` (en Academy, el diseño en `infrastructure/iam/` y su justificación) |
-| **CP-12** IaC | Los recursos se recrean sin pasos ocultos | Los 8 stacks en `CREATE_COMPLETE`; la pestaña «Recursos» de cada uno; prueba de recreación: borrar y volver a desplegar `computo` y ver la instancia nueva `healthy` |
+| **CP-10** Conectividad cloud | Comunicación autorizada; acceso directo restringido | (1) web → API → RDS funcionando (`/verificacion/conexion`); (2) la EC2 con IP pública y SG de puerto 80 únicamente desde la prefix list de CloudFront; acceso directo a la IP desde fuera de esa lista sin respuesta; (3) RDS con «Acceso público: No»; (4) intento de abrir el bucket del frontend por su URL S3 directa → `AccessDenied` (solo CloudFront entra por OAC); (5) SG de RDS que solo admite 5432 desde el SG de la app |
+| **CP-11** IAM | Aplica mínimo privilegio | (1) política del rol de EC2 limitada a los dos buckets, a los secretos de servicios, JWT y origen y a logs; (2) desde la EC2 por Session Manager, `aws s3 ls` de otro bucket → `AccessDenied`; (3) `aws secretsmanager get-secret-value` del secreto maestro → `AccessDenied`; (4) grupos y usuarios IAM sin `AdministratorAccess` (en Academy, el diseño en `infrastructure/iam/` y su justificación) |
+| **CP-12** IaC | Los recursos se recrean sin pasos ocultos | Los 8 stacks en `CREATE_COMPLETE`; la pestaña «Recursos» de cada uno; prueba de recreación: borrar y volver a desplegar `computo` y ver la instancia nueva con chequeos correctos |
 | **CP-13** Trazabilidad | Historial ordenado y destino final verificable | Un equipo recorrido de punta a punta en la web desplegada: línea de tiempo, fotos subidas a S3 (galería) y botón «Ver en la base de datos» |
-| **CP-14** Monitorización | Log, métrica y alarma observables | (1) CloudWatch Logs Insights con `fields @timestamp, estado, ruta, ms \| filter estado >= 500`; (2) provocar errores 5xx (por ejemplo, detener el contenedor de la API un par de minutos) y ver la alarma pasar a `ALARM` y el correo de SNS; (3) evento en CloudTrail de esa acción |
+| **CP-14** Monitorización | Log, métrica y alarma observables | (1) CloudWatch Logs Insights con `fields @timestamp, estado, ruta, ms \| filter estado >= 500`; (2) generar de forma controlada una respuesta 5xx de la API, comprobar filtro, panel y alarma `ALARM` y correo SNS (detener el contenedor no genera un log 5xx de la API); (3) evento en CloudTrail de esa acción |
 | **CP-15** Usabilidad | Identifica barreras y aplica mejoras | Fuera del alcance de AWS; ver `innovation/` |
 
 Consulta útil de Logs Insights (los logs de la API son JSON de una línea):
@@ -110,7 +96,7 @@ fields @timestamp, metodo, ruta, estado, ms, request_id
   de RDS solo se usa para migrar y lo gestiona RDS (`ManageMasterUserPassword`).
 - **Cifrado en tránsito:** HTTPS en CloudFront, TLS verificado hacia RDS (`DB_SSL=true` y la CA oficial de RDS).
 - **Cifrado en reposo:** RDS, EBS y los buckets S3 cifrados.
-- **Red:** EC2 y RDS en subredes privadas; IMDSv2 obligatorio; sin puerto 22 (Session Manager).
+- **Red:** EC2 en subred pública y RDS en subredes privadas; IMDSv2 obligatorio; sin puerto 22 (Session Manager).
 - **Evidencias privadas** con URL prefirmadas de 5 minutos y bitácora de cada descarga (RN-07).
 - **Auditoría:** CloudTrail para la cuenta y auditoría propia de la base para cada cambio de negocio.
 
@@ -121,11 +107,15 @@ Ver [costos.md](costos.md). Al terminar la evaluación, destruye los stacks en e
 
 ## 8. Limitaciones conocidas
 
-- Con un solo NAT Gateway, la salida a internet depende de una AZ (se acepta por costo en el laboratorio).
-- Sin dominio propio, el HTTPS termina en CloudFront; el tramo CloudFront → ALB va por HTTP dentro de la red de AWS.
-  Con un dominio y un certificado de ACM se activaría HTTPS también en el ALB.
+- Sin alta disponibilidad multi-instancia; la recuperación automática no repara fallos de aplicación.
+- HTTPS termina en CloudFront; CloudFront → EC2 usa HTTP sin cifrar.
+- La IP y DNS públicos pueden cambiar: actualice el parámetro de CDN tras una sustitución o detención/inicio.
 - El servidor MCP no se expone en AWS por defecto (perfil `mcp` de `docker-compose.aws.yml`).
 - La primera arrancada de cada instancia compila la imagen de Docker (unos minutos). Para producción conviene
-  publicar la imagen en Amazon ECR desde un pipeline de CI/CD y que el Launch Template solo la descargue.
+  publicar la imagen en Amazon ECR desde un pipeline de CI/CD y que la instancia solo la descargue.
 
 El tema SNS de eventos de negocio es independiente del de alarmas: indique `CorreoEventos` en seguridad, confirme la suscripción y compruebe cierre y transferencias con mensajes sin datos personales. En SES sandbox verifique tanto el remitente como los destinatarios.
+
+## Trusted Advisor
+
+En la consola AWS abra **Trusted Advisor → Checks**, filtre por comprobaciones gratuitas disponibles para el plan de soporte y región, revise seguridad, límites y tolerancia a fallos, y capture fecha, nombre y estado sin identificadores sensibles. La disponibilidad depende del plan de soporte.

@@ -2,7 +2,7 @@
   "Prefijo": "ecoraee-prod",
   "Entorno": "prod",
   "Responsable": "REEMPLAZAR",
-  "CrearNAT": "true",
+  "CrearNAT": "false",
   "CrearEndpoints": "false",
   "UsarLabRole": "false",
   "ClaseDB": "db.t4g.micro",

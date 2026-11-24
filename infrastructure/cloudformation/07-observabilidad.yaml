@@ -218,70 +218,6 @@
         ]
       }
     },
-    "ALB5xx": {
-      "Type": "AWS::CloudWatch::Alarm",
-      "Properties": {
-        "Namespace": "AWS/ApplicationELB",
-        "MetricName": "HTTPCode_ELB_5XX_Count",
-        "Dimensions": [
-          {
-            "Name": "LoadBalancer",
-            "Value": {
-              "Fn::ImportValue": {
-                "Fn::Sub": "${Prefijo}-ALBFullName"
-              }
-            }
-          }
-        ],
-        "Statistic": "Sum",
-        "Period": 300,
-        "EvaluationPeriods": 1,
-        "Threshold": 5,
-        "ComparisonOperator": "GreaterThanThreshold",
-        "TreatMissingData": "notBreaching",
-        "AlarmActions": [
-          {
-            "Ref": "Topic"
-          }
-        ]
-      }
-    },
-    "Hosts": {
-      "Type": "AWS::CloudWatch::Alarm",
-      "Properties": {
-        "Namespace": "AWS/ApplicationELB",
-        "MetricName": "UnHealthyHostCount",
-        "Dimensions": [
-          {
-            "Name": "LoadBalancer",
-            "Value": {
-              "Fn::ImportValue": {
-                "Fn::Sub": "${Prefijo}-ALBFullName"
-              }
-            }
-          },
-          {
-            "Name": "TargetGroup",
-            "Value": {
-              "Fn::ImportValue": {
-                "Fn::Sub": "${Prefijo}-TargetFullName"
-              }
-            }
-          }
-        ],
-        "Statistic": "Maximum",
-        "Period": 300,
-        "EvaluationPeriods": 1,
-        "Threshold": 0,
-        "ComparisonOperator": "GreaterThanThreshold",
-        "TreatMissingData": "notBreaching",
-        "AlarmActions": [
-          {
-            "Ref": "Topic"
-          }
-        ]
-      }
-    },
     "CPU": {
       "Type": "AWS::CloudWatch::Alarm",
       "Properties": {
@@ -289,10 +225,10 @@
         "MetricName": "CPUUtilization",
         "Dimensions": [
           {
-            "Name": "AutoScalingGroupName",
+            "Name": "InstanceId",
             "Value": {
               "Fn::ImportValue": {
-                "Fn::Sub": "${Prefijo}-ASG"
+                "Fn::Sub": "${Prefijo}-InstanceId"
               }
             }
           }
@@ -392,6 +328,101 @@
             "Ref": "Topic"
           }
         ]
+      }
+    },
+    "EstadoEC2": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "Namespace": "AWS/EC2",
+        "MetricName": "StatusCheckFailed",
+        "Dimensions": [
+          {
+            "Name": "InstanceId",
+            "Value": {
+              "Fn::ImportValue": {
+                "Fn::Sub": "${Prefijo}-InstanceId"
+              }
+            }
+          }
+        ],
+        "Statistic": "Maximum",
+        "Period": 300,
+        "EvaluationPeriods": 1,
+        "Threshold": 1,
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "TreatMissingData": "notBreaching",
+        "AlarmActions": [
+          {
+            "Ref": "Topic"
+          }
+        ]
+      }
+    },
+    "ErroresFiltro": {
+      "Type": "AWS::Logs::MetricFilter",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${Prefijo}-GrupoLogs"
+          }
+        },
+        "FilterPattern": "{ $.estado >= 500 }",
+        "MetricTransformations": [
+          {
+            "MetricNamespace": "EcoRAEE/API",
+            "MetricName": "Errores5xx",
+            "MetricValue": "1",
+            "DefaultValue": 0
+          }
+        ]
+      }
+    },
+    "Errores5xx": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "Namespace": "EcoRAEE/API",
+        "MetricName": "Errores5xx",
+        "Statistic": "Sum",
+        "Period": 300,
+        "EvaluationPeriods": 1,
+        "Threshold": 1,
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "TreatMissingData": "notBreaching",
+        "AlarmActions": [
+          {
+            "Ref": "Topic"
+          }
+        ]
+      }
+    },
+    "Panel": {
+      "Type": "AWS::CloudWatch::Dashboard",
+      "Properties": {
+        "DashboardName": {
+          "Fn::Sub": "${Prefijo}-operaciones"
+        },
+        "DashboardBody": {
+          "Fn::Sub": [
+            "{\"widgets\":[{\"type\":\"metric\",\"x\":0,\"y\":0,\"width\":12,\"height\":6,\"properties\":{\"title\":\"EC2 CPU y estado\",\"region\":\"${AWS::Region}\",\"period\":300,\"metrics\":[[\"AWS/EC2\",\"CPUUtilization\",\"InstanceId\",\"${Instancia}\"],[\".\",\"StatusCheckFailed\",\".\",\".\"]]}},{\"type\":\"metric\",\"x\":12,\"y\":0,\"width\":12,\"height\":6,\"properties\":{\"title\":\"RDS\",\"region\":\"${AWS::Region}\",\"period\":300,\"metrics\":[[\"AWS/RDS\",\"CPUUtilization\",\"DBInstanceIdentifier\",\"${Base}\"],[\".\",\"DatabaseConnections\",\".\",\".\"],[\".\",\"FreeStorageSpace\",\".\",\".\"]]}},{\"type\":\"metric\",\"x\":0,\"y\":6,\"width\":12,\"height\":6,\"properties\":{\"title\":\"Respuestas 5xx\",\"region\":\"${AWS::Region}\",\"stat\":\"Sum\",\"period\":300,\"metrics\":[[\"EcoRAEE/API\",\"Errores5xx\"]]}},{\"type\":\"log\",\"x\":12,\"y\":6,\"width\":12,\"height\":6,\"properties\":{\"title\":\"Latencia API (ms)\",\"region\":\"${AWS::Region}\",\"view\":\"timeSeries\",\"query\":\"SOURCE '${LogGroup}' | filter ispresent(ms) | stats avg(ms) as latencia_ms by bin(5m)\"}}]}",
+            {
+              "Instancia": {
+                "Fn::ImportValue": {
+                  "Fn::Sub": "${Prefijo}-InstanceId"
+                }
+              },
+              "Base": {
+                "Fn::ImportValue": {
+                  "Fn::Sub": "${Prefijo}-DB"
+                }
+              },
+              "LogGroup": {
+                "Fn::ImportValue": {
+                  "Fn::Sub": "${Prefijo}-GrupoLogs"
+                }
+              }
+            }
+          ]
+        }
       }
     }
   },

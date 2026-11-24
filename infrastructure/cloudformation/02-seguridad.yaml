@@ -58,35 +58,6 @@
     }
   },
   "Resources": {
-    "ALBSG": {
-      "Type": "AWS::EC2::SecurityGroup",
-      "Properties": {
-        "VpcId": {
-          "Fn::ImportValue": {
-            "Fn::Sub": "${Prefijo}-VPC"
-          }
-        },
-        "GroupDescription": "ALB publico",
-        "Tags": [
-          {
-            "Key": "Proyecto",
-            "Value": "EcoRAEE"
-          },
-          {
-            "Key": "Entorno",
-            "Value": {
-              "Ref": "Entorno"
-            }
-          },
-          {
-            "Key": "Responsable",
-            "Value": {
-              "Ref": "Responsable"
-            }
-          }
-        ]
-      }
-    },
     "AppSG": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
@@ -95,7 +66,7 @@
             "Fn::Sub": "${Prefijo}-VPC"
           }
         },
-        "GroupDescription": "API privada",
+        "GroupDescription": "API desde CloudFront",
         "Tags": [
           {
             "Key": "Proyecto",
@@ -145,20 +116,6 @@
         ]
       }
     },
-    "ALBIngress": {
-      "Type": "AWS::EC2::SecurityGroupIngress",
-      "Properties": {
-        "GroupId": {
-          "Ref": "ALBSG"
-        },
-        "IpProtocol": "tcp",
-        "FromPort": 80,
-        "ToPort": 80,
-        "SourcePrefixListId": {
-          "Ref": "CloudFrontPrefixListId"
-        }
-      }
-    },
     "AppIngress": {
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
@@ -166,10 +123,10 @@
           "Ref": "AppSG"
         },
         "IpProtocol": "tcp",
-        "FromPort": 8000,
-        "ToPort": 8000,
-        "SourceSecurityGroupId": {
-          "Ref": "ALBSG"
+        "FromPort": 80,
+        "ToPort": 80,
+        "SourcePrefixListId": {
+          "Ref": "CloudFrontPrefixListId"
         }
       }
     },
@@ -253,6 +210,9 @@
                     },
                     {
                       "Ref": "SecretoJwtArn"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Prefijo}/origin-??????"
                     }
                   ]
                 },
@@ -324,16 +284,6 @@
     }
   },
   "Outputs": {
-    "ALBSG": {
-      "Value": {
-        "Ref": "ALBSG"
-      },
-      "Export": {
-        "Name": {
-          "Fn::Sub": "${Prefijo}-ALBSG"
-        }
-      }
-    },
     "AppSG": {
       "Value": {
         "Ref": "AppSG"

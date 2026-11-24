@@ -283,8 +283,6 @@
                 "cloudformation:GetTemplate",
                 "cloudformation:ListStacks",
                 "ec2:Describe*",
-                "elasticloadbalancing:Describe*",
-                "autoscaling:Describe*",
                 "cloudfront:GetDistribution",
                 "cloudfront:ListDistributions"
               ],
@@ -421,9 +419,7 @@
             {
               "Effect": "Allow",
               "Action": [
-                "autoscaling:Describe*",
-                "ec2:DescribeInstances",
-                "elasticloadbalancing:Describe*"
+                "ec2:DescribeInstances"
               ],
               "Resource": [
                 "*"
@@ -617,8 +613,6 @@
                   "Effect": "Allow",
                   "Action": [
                     "ec2:*",
-                    "elasticloadbalancing:*",
-                    "autoscaling:*",
                     "rds:*",
                     "s3:*",
                     "cloudfront:*",
@@ -693,9 +687,7 @@
                   "Condition": {
                     "StringLike": {
                       "iam:AWSServiceName": [
-                        "autoscaling.amazonaws.com",
-                        "rds.amazonaws.com",
-                        "elasticloadbalancing.amazonaws.com"
+                        "rds.amazonaws.com"
                       ]
                     }
                   }

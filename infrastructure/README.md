@@ -11,7 +11,7 @@ El rol de despliegue tiene acciones amplias solo para los servicios usados por l
 
 Plantillas CloudFormation en JSON (subconjunto válido de YAML). Los ejemplos son Bash y utilizan AWS CLI v2, `jq`, `zip` y credenciales del operador; no guardan credenciales en el repositorio. Verifique cuotas, permisos y región. No se ha desplegado automáticamente. Sustituya identificadores por nombres de bucket globalmente únicos. `parametros/lab.json` es inventario de valores, no un archivo directamente compatible con `--parameter-overrides`.
 
-Se necesita NAT para instalar paquetes y descargar el certificado de RDS y dependencias: los endpoints de interfaz opcionales no sustituyen esa salida a internet. Si se desactiva NAT, aporte una AMI y un proceso de arranque con todos los paquetes e imagen precargados; el user-data suministrado no funcionará sin esa adaptación. Un único NAT es un punto de fallo entre AZ. Permita acceso HTTPS de las instancias a los servicios necesarios. `UsarLabRole=true` requiere que el perfil de Academy ya tenga permisos equivalentes; CloudFormation no puede ampliarlos.
+La EC2 está en una subred pública con IPv4 pública y salida mediante Internet Gateway; `CrearNAT=false` y `CrearEndpoints=false`. El endpoint gateway de S3 se conserva. Solo CloudFront alcanza el puerto 80; no hay SSH. `UsarLabRole=true` exige permisos equivalentes en el perfil existente. La lista administrada de CloudFront ocupa varias entradas de cuota de SG: compruebe que la cuota regional lo permite.
 
 ```bash
 export AWS_REGION=us-east-2 AWS_DEFAULT_REGION=us-east-2
@@ -48,7 +48,7 @@ aws s3 cp /tmp/ecoraee-codigo.zip "s3://$ART/$KEY"
 rm /tmp/ecoraee-codigo.zip
 deploy_stack "$P-red" infrastructure/cloudformation/01-red.yaml
 deploy_stack "$P-seguridad" infrastructure/cloudformation/02-seguridad.yaml CorreoEventos="$EMAIL" CloudFrontPrefixListId="$CF_PREFIX" BucketEvidencias="$EVID" BucketContenidos="$CONT" BucketArtefactos="$ART" ClaveArtefacto="$KEY" SecretoServiciosArn="$SVC" SecretoJwtArn="$JWT"
-deploy_stack "$P-datos" infrastructure/cloudformation/03-datos.yaml
+deploy_stack "$P-datos" infrastructure/cloudformation/03-datos.yaml DiasRespaldo=1
 # Origen temporal válido; se reemplaza cuando se crea la distribución.
 ORIGEN=https://example.invalid
 deploy_stack "$P-almacenamiento" infrastructure/cloudformation/04-almacenamiento.yaml BucketFrontend="$FRONT" BucketEvidencias="$EVID" BucketContenidos="$CONT" OrigenWeb="$ORIGEN"
@@ -56,12 +56,17 @@ export DB_SECRET_ARN=$(aws cloudformation describe-stacks --stack-name "$P-datos
 export JWT_SECRET_ARN=$(aws cloudformation describe-stacks --stack-name "$P-datos" --query "Stacks[0].Outputs[?OutputKey=='JwtSecret'].OutputValue" --output text)
 export MASTER_SECRET_ARN=$(aws cloudformation describe-stacks --stack-name "$P-datos" --query "Stacks[0].Outputs[?OutputKey=='MasterSecret'].OutputValue" --output text)
 deploy_stack "$P-computo" infrastructure/cloudformation/05-computo.yaml OriginVerifySecret="$ORIGIN_SECRET" BucketArtefactos="$ART" ClaveArtefacto="$KEY" SecretoServiciosArn="$DB_SECRET_ARN" SecretoJwtArn="$JWT_SECRET_ARN" BucketEvidencias="$EVID" BucketContenidos="$CONT" OrigenWeb="$ORIGEN" GrupoLogs="$LOGS"
-deploy_stack "$P-cdn" infrastructure/cloudformation/06-cdn.yaml BucketFrontend="$FRONT" OriginVerifySecret="$ORIGIN_SECRET"
+DNS_EC2=$(aws cloudformation describe-stacks --stack-name "$P-computo" --query "Stacks[0].Outputs[?OutputKey=='PublicDnsName'].OutputValue" --output text)
+deploy_stack "$P-cdn" infrastructure/cloudformation/06-cdn.yaml BucketFrontend="$FRONT" PublicDnsName="$DNS_EC2" OriginVerifySecret="$ORIGIN_SECRET"
 DOMAIN=$(aws cloudformation describe-stacks --stack-name "$P-cdn" --query "Stacks[0].Outputs[?OutputKey=='Domain'].OutputValue" --output text)
 export DISTRIBUCION_ID=$(aws cloudformation describe-stacks --stack-name "$P-cdn" --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" --output text)
 ORIGEN="https://$DOMAIN"
 deploy_stack "$P-almacenamiento" infrastructure/cloudformation/04-almacenamiento.yaml BucketFrontend="$FRONT" BucketEvidencias="$EVID" BucketContenidos="$CONT" OrigenWeb="$ORIGEN"
 deploy_stack "$P-computo" infrastructure/cloudformation/05-computo.yaml OriginVerifySecret="$ORIGIN_SECRET" BucketArtefactos="$ART" ClaveArtefacto="$KEY" SecretoServiciosArn="$DB_SECRET_ARN" SecretoJwtArn="$JWT_SECRET_ARN" BucketEvidencias="$EVID" BucketContenidos="$CONT" OrigenWeb="$ORIGEN" GrupoLogs="$LOGS"
+# Compruebe el DNS y actualice CDN si cambió. Para aplicar el nuevo OrigenWeb al contenedor,
+# reinicie su configuración en la instancia según el procedimiento de actualización de abajo.
+DNS_EC2=$(aws cloudformation describe-stacks --stack-name "$P-computo" --query "Stacks[0].Outputs[?OutputKey=='PublicDnsName'].OutputValue" --output text)
+deploy_stack "$P-cdn" infrastructure/cloudformation/06-cdn.yaml BucketFrontend="$FRONT" PublicDnsName="$DNS_EC2" OriginVerifySecret="$ORIGIN_SECRET"
 deploy_stack "$P-observabilidad" infrastructure/cloudformation/07-observabilidad.yaml BucketAuditoria="$AUDIT" CorreoAlerta="$EMAIL"
 # Cambie al perfil del usuario de aplicaciones antes de publicar:
 export BUCKET_FRONTEND="$FRONT"
@@ -70,7 +75,7 @@ bash infrastructure/scripts/publicar_frontend.sh
 
 El parámetro `CloudFrontPrefixListId` identifica la lista administrada de CloudFront en la región (sin valor predeterminado); consúltela con el comando del ejemplo. `OriginVerifySecret` es un parámetro NoEcho compartido por los stacks de cómputo y CDN: proporcione el mismo valor alfanumérico secreto a ambos y protéjalo durante su gestión y rotación.
 
-Para usar Compose manualmente, copie `.env.aws.example` a `.env.aws` y ejecute `docker compose --env-file .env.aws -f docker-compose.aws.yml up -d`; proporcione la CA de RDS confiable a la imagen y configure una secuencia de logs única por instancia. El stack utiliza el Launch Template, no Compose.
+Para usar Compose manualmente, copie `.env.aws.example` a `.env.aws` y ejecute `docker compose --env-file .env.aws -f docker-compose.aws.yml up -d`; proporcione la CA de RDS confiable a la imagen y configure una secuencia de logs única por instancia. El stack utiliza una EC2, no Compose.
 
 Para Academy cambie `UsarLabRole=true` y, si es necesario, `LabInstanceProfile=...`; la cuenta debe permitir igualmente los servicios y recursos. Cree el bucket de artefactos fuera de estos stacks, con bloqueo público, cifrado y permisos de subida del operador. Configure `aws cloudformation deploy --tags Proyecto=EcoRAEE Entorno=lab Responsable=...` para propagar etiquetas a los recursos que admitan etiquetas heredadas. El bucket de CloudTrail y el resto se conservan al borrar los stacks. La alarma SNS necesita una suscripción por correo confirmada; solicítela con el titular si el usuario de infraestructura no tiene permisos directos de SNS.
 
@@ -78,7 +83,8 @@ Para Academy cambie `UsarLabRole=true` y, si es necesario, `LabInstanceProfile=.
 
 Ejecute `infrastructure/scripts/migrar_base.sh` **una sola vez sobre la base vacía**, desde la PC con el perfil DBA, el túnel de Session Manager descrito abajo, `psql` 16, `jq`, AWS CLI y acceso al repositorio. El rol de ejecución de la API no puede leer el maestro. AWS CLI debe alcanzar Secrets Manager y psql debe alcanzar RDS a través del túnel. Descargue el CA oficial `https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem`, exporte `PGSSLROOTCERT` con su ruta y exporte `MASTER_SECRET_ARN`, `DB_SECRET_ARN` y `AWS_REGION`. La API tendrá fallos de salud hasta que la migración termine. Después de que arranque, ejecute `docker exec ecoraee-api python -m app.cli inicializar` desde Session Manager para calcular los escenarios iniciales. No usar la instancia de producción con el rol de runtime para otorgar el secreto maestro de forma permanente. El script exige los archivos 01–20 del orden vigente. Exporte `ADMIN_CORREO`, `ADMIN_ALIAS` y `ADMIN_CLAVE` (mínimo 16 caracteres) antes de migrar; el script prepara el administrador y bloquea las cuentas sintéticas. Defina `CLAVE_DEMO` solo para habilitarlas expresamente en evaluación. `DEMO=true` es opcional y solo para datos sintéticos. El comando `--datos` restaura un volcado completo desde `DATABASE_LOCAL_URL` sobre una base sin los esquemas de la aplicación; requiere una fuente actualizada hasta 19 y 20. Restaura datos antes de restricciones y triggers, conserva permisos, crea logins y prepara producción. No ejecutar primero la migración de esquema en ese destino. Use PGPASSFILE para las credenciales de origen. Probado localmente con PostgreSQL 16 y un maestro sin superusuario; el túnel y TLS reales siguen pendientes.
 
-Al cambiar parámetros del Launch Template o el ZIP, actualice la clave del ZIP, vuelva a desplegar los stacks de seguridad y cómputo y renueve instancias: `aws autoscaling start-instance-refresh --auto-scaling-group-name NOMBRE_ASG`. Los secretos de servicio se materializan en un secreto compuesto: rotar los secretos generadores **no** actualiza automáticamente el compuesto ni las contraseñas de PostgreSQL; coordinar rotación de ambos y reiniciar la API. El JWT es texto plano en Secrets Manager; el secreto compuesto contiene exactamente `host`, `port`, `dbname`, `api` y `mcp`.
+Al cambiar el user-data o el ZIP, actualice la clave del ZIP y despliegue seguridad y cómputo. EC2 no vuelve a ejecutar automáticamente cloud-init al actualizar user-data: para aplicar el arranque actualizado, elimine primero observabilidad (importa la instancia y los logs), elimine y recree cómputo, y vuelva a crear observabilidad; conserve y proteja los logs que necesite. Consulte el nuevo `PublicDnsName` y actualice `PublicDnsName` en CDN. Para el segundo despliegue de cómputo con el dominio real, aplique este procedimiento antes de comprobar CORS. La IPv4 y el DNS también pueden cambiar tras detener/iniciar la instancia; actualice CDN si cambia. El secreto de origen se guarda en Secrets Manager y solo su ARN llega al contenedor; el mismo valor se configura en CDN. Para rotarlo, coordine ambos stacks y reinicie o reemplace la instancia: la aplicación lo carga al iniciar. No incluya valores secretos en capturas o historial de comandos. Los secretos de servicio son compuestos: rotar los generadores no actualiza automáticamente el compuesto ni PostgreSQL; coordine ambas contraseñas y reinicie la API.
+
 
 ## Destrucción
 

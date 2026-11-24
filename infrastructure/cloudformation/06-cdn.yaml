@@ -22,6 +22,10 @@
       "MinLength": 16,
       "MaxLength": 128,
       "AllowedPattern": "[a-zA-Z0-9]+"
+    },
+    "PublicDnsName": {
+      "Type": "String",
+      "Description": "DNS publico de la instancia EC2"
     }
   },
   "Resources": {
@@ -78,9 +82,7 @@
             {
               "Id": "api",
               "DomainName": {
-                "Fn::ImportValue": {
-                  "Fn::Sub": "${Prefijo}-ALBDNS"
-                }
+                "Ref": "PublicDnsName"
               },
               "CustomOriginConfig": {
                 "OriginProtocolPolicy": "http-only",

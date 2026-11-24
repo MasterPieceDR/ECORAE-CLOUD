@@ -54,6 +54,9 @@ class Config(BaseSettings):
     correo_smtp_usuario: str = ""
     correo_smtp_clave: str = ""
 
+    origin_secret_arn: str | None = None
+    origin_secret: str = ""
+
     # Web
     cors_origenes: str = "http://localhost:5171,http://127.0.0.1:5171"
 
@@ -81,6 +84,10 @@ def config() -> Config:
         c.db_usuario_mcp, c.db_clave_mcp = s["mcp"]["username"], s["mcp"]["password"]
     if c.jwt_secret_arn:
         c.jwt_secreto = _secreto(c.jwt_secret_arn, c.aws_region)
+    if c.origin_secret_arn:
+        c.origin_secret = _secreto(c.origin_secret_arn, c.aws_region)
+        if not c.origin_secret:
+            raise RuntimeError("Secreto del origen vacío")
     if c.entorno == "produccion" and c.jwt_secreto == "cambiar-en-produccion":
         raise RuntimeError("JWT_SECRETO no configurado en producción")
     return c
